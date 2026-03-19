@@ -60,12 +60,12 @@ func (c *Container) SetStale(value bool) {
 }
 
 // ContainerInfo fetches JSON info for the container
-func (c Container) ContainerInfo() *types.ContainerJSON {
+func (c *Container) ContainerInfo() *types.ContainerJSON {
 	return c.containerInfo
 }
 
 // ID returns the Docker container ID.
-func (c Container) ID() wt.ContainerID {
+func (c *Container) ID() wt.ContainerID {
 	return wt.ContainerID(c.containerInfo.ID)
 }
 
@@ -118,7 +118,7 @@ func (c *Container) ImageName() string {
 
 // Enabled returns the value of the container enabled label and if the label
 // was set.
-func (c Container) Enabled() (bool, bool) {
+func (c *Container) Enabled() (bool, bool) {
 	rawBool, ok := c.getLabelValue(enableLabel)
 	if !ok {
 		return false, false
@@ -134,17 +134,17 @@ func (c Container) Enabled() (bool, bool) {
 
 // IsMonitorOnly returns whether the container should only be monitored based on values of
 // the monitor-only label, the monitor-only argument and the label-take-precedence argument.
-func (c Container) IsMonitorOnly(params wt.UpdateParams) bool {
+func (c *Container) IsMonitorOnly(params wt.UpdateParams) bool {
 	return c.getContainerOrGlobalBool(params.MonitorOnly, monitorOnlyLabel, params.LabelPrecedence)
 }
 
 // IsNoPull returns whether the image should be pulled based on values of
 // the no-pull label, the no-pull argument and the label-take-precedence argument.
-func (c Container) IsNoPull(params wt.UpdateParams) bool {
+func (c *Container) IsNoPull(params wt.UpdateParams) bool {
 	return c.getContainerOrGlobalBool(params.NoPull, noPullLabel, params.LabelPrecedence)
 }
 
-func (c Container) getContainerOrGlobalBool(globalVal bool, label string, contPrecedence bool) bool {
+func (c *Container) getContainerOrGlobalBool(globalVal bool, label string, contPrecedence bool) bool {
 	if contVal, err := c.getBoolLabelValue(label); err != nil {
 		if !errors.Is(err, errorLabelNotFound) {
 			logrus.WithField("error", err).WithField("label", label).Warn("Failed to parse label value")
@@ -161,7 +161,7 @@ func (c Container) getContainerOrGlobalBool(globalVal bool, label string, contPr
 
 // Scope returns the value of the scope UID label and if the label
 // was set.
-func (c Container) Scope() (string, bool) {
+func (c *Container) Scope() (string, bool) {
 	rawString, ok := c.getLabelValue(scope)
 	if !ok {
 		return "", false
@@ -172,7 +172,7 @@ func (c Container) Scope() (string, bool) {
 
 // Links returns a list containing the names of all the containers to which
 // this container is linked.
-func (c Container) Links() []string {
+func (c *Container) Links() []string {
 	var links []string
 
 	dependsOnLabelValue := c.getLabelValueOrEmpty(dependsOnLabel)
@@ -216,7 +216,7 @@ func (c *Container) ToRestart() bool {
 // container is the watchtower container itself. The watchtower container is
 // identified by the presence of the "com.centurylinklabs.watchtower" label in
 // the container metadata.
-func (c Container) IsWatchtower() bool {
+func (c *Container) IsWatchtower() bool {
 	return ContainsWatchtowerLabel(c.containerInfo.Config.Labels)
 }
 
@@ -225,7 +225,7 @@ func (c Container) IsWatchtower() bool {
 // either as an integer, in minutes, or as 0 which will allow the command/script
 // to run indefinitely. Users should be cautious with the 0 option, as that
 // could result in watchtower waiting forever.
-func (c Container) PreUpdateTimeout() int {
+func (c *Container) PreUpdateTimeout() int {
 	var minutes int
 	var err error
 
@@ -244,7 +244,7 @@ func (c Container) PreUpdateTimeout() int {
 // either as an integer, in minutes, or as 0 which will allow the command/script
 // to run indefinitely. Users should be cautious with the 0 option, as that
 // could result in watchtower waiting forever.
-func (c Container) PostUpdateTimeout() int {
+func (c *Container) PostUpdateTimeout() int {
 	var minutes int
 	var err error
 
@@ -261,7 +261,7 @@ func (c Container) PostUpdateTimeout() int {
 // StopSignal returns the custom stop signal (if any) that is encoded in the
 // container's metadata. If the container has not specified a custom stop
 // signal, the empty string "" is returned.
-func (c Container) StopSignal() string {
+func (c *Container) StopSignal() string {
 	return c.getLabelValueOrEmpty(signalLabel)
 }
 
@@ -281,7 +281,7 @@ func (c Container) StopSignal() string {
 // running container with the ContainerConfig from the image that container was
 // started from. This function returns a ContainerConfig which contains just
 // the options overridden at runtime.
-func (c Container) GetCreateConfig() *dockercontainer.Config {
+func (c *Container) GetCreateConfig() *dockercontainer.Config {
 	config := c.containerInfo.Config
 	hostConfig := c.containerInfo.HostConfig
 	imageConfig := c.imageInfo.Config
@@ -353,7 +353,7 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 
 // GetCreateHostConfig returns the container's current HostConfig with any links
 // re-written so that they can be re-submitted to the Docker create API.
-func (c Container) GetCreateHostConfig() *dockercontainer.HostConfig {
+func (c *Container) GetCreateHostConfig() *dockercontainer.HostConfig {
 	hostConfig := c.containerInfo.HostConfig
 
 	for i, link := range hostConfig.Links {
@@ -367,18 +367,18 @@ func (c Container) GetCreateHostConfig() *dockercontainer.HostConfig {
 }
 
 // HasImageInfo returns whether image information could be retrieved for the container
-func (c Container) HasImageInfo() bool {
+func (c *Container) HasImageInfo() bool {
 	return c.imageInfo != nil
 }
 
 // ImageInfo fetches the ImageInspect data of the current container
-func (c Container) ImageInfo() *types.ImageInspect {
+func (c *Container) ImageInfo() *types.ImageInspect {
 	return c.imageInfo
 }
 
 // VerifyConfiguration checks the container and image configurations for nil references to make sure
 // that the container can be recreated once deleted
-func (c Container) VerifyConfiguration() error {
+func (c *Container) VerifyConfiguration() error {
 	if c.imageInfo == nil {
 		return errorNoImageInfo
 	}

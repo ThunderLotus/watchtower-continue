@@ -1,6 +1,6 @@
 package util
 
-import "math/rand"
+import "math/rand/v2"
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -8,7 +8,7 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func RandName() string {
 	b := make([]rune, 32)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = letters[rand.IntN(len(letters))]
 	}
 
 	return string(b)
