@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/containrrr/watchtower/pkg/retry"
 )
 
 // DockerAPIMinVersion is the minimum version of the docker api required to
@@ -153,29 +155,6 @@ func RegisterSystemFlags(rootCmd *cobra.Command) {
 		envBool("WATCHTOWER_ROLLING_RESTART"),
 		"Restart containers one at a time")
 
-	flags.BoolP(
-		"http-api-update",
-		"",
-		envBool("WATCHTOWER_HTTP_API_UPDATE"),
-		"Runs Watchtower in HTTP API mode, so that image updates must to be triggered by a request")
-	flags.BoolP(
-		"http-api-metrics",
-		"",
-		envBool("WATCHTOWER_HTTP_API_METRICS"),
-		"Runs Watchtower with the Prometheus metrics API enabled")
-
-	flags.StringP(
-		"http-api-token",
-		"",
-		envString("WATCHTOWER_HTTP_API_TOKEN"),
-		"Sets an authentication token to HTTP API requests.")
-
-	flags.BoolP(
-		"http-api-periodic-polls",
-		"",
-		envBool("WATCHTOWER_HTTP_API_PERIODIC_POLLS"),
-		"Also run periodic updates (specified with --interval and --schedule) if HTTP API is enabled")
-
 	// https://no-color.org/
 	flags.BoolP(
 		"no-color",
@@ -198,7 +177,7 @@ func RegisterSystemFlags(rootCmd *cobra.Command) {
 	flags.String(
 		"log-level",
 		envString("WATCHTOWER_LOG_LEVEL"),
-		"The maximum log level that will be written to STDERR. Possible values: panic, fatal, error, warn, info, debug or trace")
+		"The maximum log level that will be written to STDERR. Possible values: panic, fatal, error, warn, info or debug")
 
 	flags.BoolP(
 		"health-check",
@@ -211,6 +190,31 @@ func RegisterSystemFlags(rootCmd *cobra.Command) {
 		"",
 		envBool("WATCHTOWER_LABEL_TAKE_PRECEDENCE"),
 		"Label applied to containers take precedence over arguments")
+
+	// Retry configuration flags
+	flags.BoolP(
+		"retry-enable",
+		"",
+		envBool("WATCHTOWER_RETRY_ENABLE"),
+		"Enable retry mechanism for network operations (default: true)")
+
+	flags.IntP(
+		"retry-max-attempts",
+		"",
+		envInt("WATCHTOWER_RETRY_MAX_ATTEMPTS"),
+		"Maximum number of retry attempts for network operations (default: 5)")
+
+	flags.DurationP(
+		"retry-initial-delay",
+		"",
+		envDuration("WATCHTOWER_RETRY_INITIAL_DELAY"),
+		"Initial delay before first retry (default: 1s)")
+
+	flags.DurationP(
+		"retry-max-delay",
+		"",
+		envDuration("WATCHTOWER_RETRY_MAX_DELAY"),
+		"Maximum delay between retries (default: 30s)")
 }
 
 // RegisterNotificationFlags that are used by watchtower to send notifications
@@ -221,7 +225,7 @@ func RegisterNotificationFlags(rootCmd *cobra.Command) {
 		"notifications",
 		"n",
 		envStringSlice("WATCHTOWER_NOTIFICATIONS"),
-		" Notification types to send (valid: email, slack, msteams, gotify, shoutrrr)")
+		"Notification types to send (valid: email)")
 
 	flags.String(
 		"notifications-level",
@@ -296,81 +300,6 @@ Should only be used for testing.`)
 		"Subject prefix tag for notifications via mail")
 
 	flags.StringP(
-		"notification-slack-hook-url",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL"),
-		"The Slack Hook URL to send notifications to")
-
-	flags.StringP(
-		"notification-slack-identifier",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER"),
-		"A string which will be used to identify the messages coming from this watchtower instance")
-
-	flags.StringP(
-		"notification-slack-channel",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_SLACK_CHANNEL"),
-		"A string which overrides the webhook's default channel. Example: #my-custom-channel")
-
-	flags.StringP(
-		"notification-slack-icon-emoji",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_SLACK_ICON_EMOJI"),
-		"An emoji code string to use in place of the default icon")
-
-	flags.StringP(
-		"notification-slack-icon-url",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_SLACK_ICON_URL"),
-		"An icon image URL string to use in place of the default icon")
-
-	flags.StringP(
-		"notification-msteams-hook",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_MSTEAMS_HOOK_URL"),
-		"The MSTeams WebHook URL to send notifications to")
-
-	flags.BoolP(
-		"notification-msteams-data",
-		"",
-		envBool("WATCHTOWER_NOTIFICATION_MSTEAMS_USE_LOG_DATA"),
-		"The MSTeams notifier will try to extract log entry fields as MSTeams message facts")
-
-	flags.StringP(
-		"notification-gotify-url",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_GOTIFY_URL"),
-		"The Gotify URL to send notifications to")
-
-	flags.StringP(
-		"notification-gotify-token",
-		"",
-		envString("WATCHTOWER_NOTIFICATION_GOTIFY_TOKEN"),
-		"The Gotify Application required to query the Gotify API")
-
-	flags.BoolP(
-		"notification-gotify-tls-skip-verify",
-		"",
-		envBool("WATCHTOWER_NOTIFICATION_GOTIFY_TLS_SKIP_VERIFY"),
-		`Controls whether watchtower verifies the Gotify server's certificate chain and host name.
-Should only be used for testing.`)
-
-	flags.String(
-		"notification-template",
-		envString("WATCHTOWER_NOTIFICATION_TEMPLATE"),
-		"The shoutrrr text/template for the messages")
-
-	flags.StringArray(
-		"notification-url",
-		envStringSlice("WATCHTOWER_NOTIFICATION_URL"),
-		"The shoutrrr URL to send notifications to")
-
-	flags.Bool("notification-report",
-		envBool("WATCHTOWER_NOTIFICATION_REPORT"),
-		"Use the session report as the notification template data")
-
-	flags.StringP(
 		"notification-title-tag",
 		"",
 		envString("WATCHTOWER_NOTIFICATION_TITLE_TAG"),
@@ -384,11 +313,6 @@ Should only be used for testing.`)
 		"warn-on-head-failure",
 		envString("WATCHTOWER_WARN_ON_HEAD_FAILURE"),
 		"When to warn about HEAD pull requests failing. Possible values: always, auto or never")
-
-	flags.Bool(
-		"notification-log-stdout",
-		envBool("WATCHTOWER_NOTIFICATION_LOG_STDOUT"),
-		"Write notification logs to stdout instead of logging (to stderr)")
 }
 
 func envString(key string) string {
@@ -411,6 +335,11 @@ func envBool(key string) bool {
 	return viper.GetBool(key)
 }
 
+func envFloat64(key string) float64 {
+	viper.MustBindEnv(key)
+	return viper.GetFloat64(key)
+}
+
 func envDuration(key string) time.Duration {
 	viper.MustBindEnv(key)
 	return viper.GetDuration(key)
@@ -427,9 +356,12 @@ func SetDefaults() {
 	viper.SetDefault("WATCHTOWER_NOTIFICATIONS_LEVEL", "info")
 	viper.SetDefault("WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT", 25)
 	viper.SetDefault("WATCHTOWER_NOTIFICATION_EMAIL_SUBJECTTAG", "")
-	viper.SetDefault("WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER", "watchtower")
 	viper.SetDefault("WATCHTOWER_LOG_LEVEL", "info")
 	viper.SetDefault("WATCHTOWER_LOG_FORMAT", "auto")
+	viper.SetDefault("WATCHTOWER_RETRY_ENABLE", true)
+	viper.SetDefault("WATCHTOWER_RETRY_MAX_ATTEMPTS", 5)
+	viper.SetDefault("WATCHTOWER_RETRY_INITIAL_DELAY", 1*time.Second)
+	viper.SetDefault("WATCHTOWER_RETRY_MAX_DELAY", 30*time.Second)
 }
 
 // EnvConfig translates the command-line options into environment variables
@@ -464,7 +396,7 @@ func EnvConfig(cmd *cobra.Command) error {
 }
 
 // ReadFlags reads common flags used in the main program flow of watchtower
-func ReadFlags(cmd *cobra.Command) (bool, bool, bool, time.Duration) {
+func ReadFlags(cmd *cobra.Command) (bool, bool, bool, time.Duration, error) {
 	flags := cmd.PersistentFlags()
 
 	var err error
@@ -474,19 +406,19 @@ func ReadFlags(cmd *cobra.Command) (bool, bool, bool, time.Duration) {
 	var timeout time.Duration
 
 	if cleanup, err = flags.GetBool("cleanup"); err != nil {
-		log.Fatal(err)
+		return false, false, false, 0, fmt.Errorf("failed to get cleanup flag: %w", err)
 	}
 	if noRestart, err = flags.GetBool("no-restart"); err != nil {
-		log.Fatal(err)
+		return false, false, false, 0, fmt.Errorf("failed to get no-restart flag: %w", err)
 	}
 	if monitorOnly, err = flags.GetBool("monitor-only"); err != nil {
-		log.Fatal(err)
+		return false, false, false, 0, fmt.Errorf("failed to get monitor-only flag: %w", err)
 	}
 	if timeout, err = flags.GetDuration("stop-timeout"); err != nil {
-		log.Fatal(err)
+		return false, false, false, 0, fmt.Errorf("failed to get stop-timeout flag: %w", err)
 	}
 
-	return cleanup, noRestart, monitorOnly, timeout
+	return cleanup, noRestart, monitorOnly, timeout, nil
 }
 
 func setEnvOptStr(env string, opt string) error {
@@ -509,22 +441,18 @@ func setEnvOptBool(env string, opt bool) error {
 
 // GetSecretsFromFiles checks if passwords/tokens/webhooks have been passed as a file instead of plaintext.
 // If so, the value of the flag will be replaced with the contents of the file.
-func GetSecretsFromFiles(rootCmd *cobra.Command) {
+func GetSecretsFromFiles(rootCmd *cobra.Command) error {
 	flags := rootCmd.PersistentFlags()
 
 	secrets := []string{
 		"notification-email-server-password",
-		"notification-slack-hook-url",
-		"notification-msteams-hook",
-		"notification-gotify-token",
-		"notification-url",
-		"http-api-token",
 	}
 	for _, secret := range secrets {
 		if err := getSecretFromFile(flags, secret); err != nil {
-			log.Fatalf("failed to get secret from flag %v: %s", secret, err)
+			return fmt.Errorf("failed to get secret from flag %v: %w", secret, err)
 		}
 	}
+	return nil
 }
 
 // getSecretFromFile will check if the flag contains a reference to a file; if it does, replaces the value of the flag with the contents of the file.
@@ -582,23 +510,18 @@ func isFile(s string) bool {
 }
 
 // ProcessFlagAliases updates the value of flags that are being set by helper flags
-func ProcessFlagAliases(flags *pflag.FlagSet) {
+func ProcessFlagAliases(flags *pflag.FlagSet) error {
 
 	porcelain, err := flags.GetString(`porcelain`)
 	if err != nil {
-		log.Fatalf(`Failed to get flag: %v`, err)
+		return fmt.Errorf("failed to get porcelain flag: %w", err)
 	}
 	if porcelain != "" {
 		if porcelain != "v1" {
-			log.Fatalf(`Unknown porcelain version %q. Supported values: "v1"`, porcelain)
+			return fmt.Errorf("unknown porcelain version %q. Supported values: \"v1\"", porcelain)
 		}
-		if err = appendFlagValue(flags, `notification-url`, `logger://`); err != nil {
-			log.Errorf(`Failed to set flag: %v`, err)
-		}
-		setFlagIfDefault(flags, `notification-log-stdout`, `true`)
-		setFlagIfDefault(flags, `notification-report`, `true`)
-		tpl := fmt.Sprintf(`porcelain.%s.summary-no-log`, porcelain)
-		setFlagIfDefault(flags, `notification-template`, tpl)
+		// Porcelain mode is not supported without Shoutrrr
+		log.Warn("Porcelain mode is not supported in the simplified notification system")
 	}
 
 	scheduleChanged := flags.Changed(`schedule`)
@@ -613,7 +536,7 @@ func ProcessFlagAliases(flags *pflag.FlagSet) {
 	}
 
 	if intervalChanged && scheduleChanged {
-		log.Fatal(`Only schedule or interval can be defined, not both.`)
+		return errors.New("only schedule or interval can be defined, not both")
 	}
 
 	// update schedule flag to match interval if it's set, or to the default if none of them are
@@ -630,13 +553,16 @@ func ProcessFlagAliases(flags *pflag.FlagSet) {
 		_ = flags.Set(`log-level`, `trace`)
 	}
 
+	return nil
 }
+
 
 // SetupLogging reads only the flags that is needed to set up logging and applies them to the global logger
 func SetupLogging(f *pflag.FlagSet) error {
 	logFormat, _ := f.GetString(`log-format`)
 	noColor, _ := f.GetBool("no-color")
 
+	// Configure formatter
 	switch strings.ToLower(logFormat) {
 	case "auto":
 		// This will either use the "pretty" or "logfmt" format, based on whether the standard out is connected to a TTY
@@ -644,30 +570,40 @@ func SetupLogging(f *pflag.FlagSet) error {
 			DisableColors: noColor,
 			// enable logrus built-in support for https://bixense.com/clicolors/
 			EnvironmentOverrideColors: true,
+			FullTimestamp:             true,
+			TimestampFormat:           time.RFC3339,
 		})
 	case "json":
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: time.RFC3339,
+		})
 	case "logfmt":
 		log.SetFormatter(&log.TextFormatter{
-			DisableColors: true,
-			FullTimestamp: true,
+			DisableColors:   true,
+			FullTimestamp:   true,
+			TimestampFormat: time.RFC3339,
 		})
 	case "pretty":
 		log.SetFormatter(&log.TextFormatter{
 			// "Pretty" format combined with `--no-color` will only change the timestamp to the time since start
-			ForceColors:   !noColor,
-			FullTimestamp: false,
+			ForceColors:      !noColor,
+			FullTimestamp:    false,
+			EnvironmentOverrideColors: true,
 		})
 	default:
 		return fmt.Errorf("invalid log format: %s", logFormat)
 	}
 
+	// Configure log level
 	rawLogLevel, _ := f.GetString(`log-level`)
 	if logLevel, err := log.ParseLevel(rawLogLevel); err != nil {
-		return fmt.Errorf("invalid log level: %e", err)
+		return fmt.Errorf("invalid log level: %w", err)
 	} else {
 		log.SetLevel(logLevel)
 	}
+
+	// Always output to stderr
+	log.SetOutput(os.Stderr)
 
 	return nil
 }
@@ -675,7 +611,8 @@ func SetupLogging(f *pflag.FlagSet) error {
 func flagIsEnabled(flags *pflag.FlagSet, name string) bool {
 	value, err := flags.GetBool(name)
 	if err != nil {
-		log.Fatalf(`The flag %q is not defined`, name)
+		log.Warnf(`The flag %q is not defined: %v`, name, err)
+		return false
 	}
 	return value
 }
@@ -704,4 +641,62 @@ func setFlagIfDefault(flags *pflag.FlagSet, name string, value string) {
 	if err := flags.Set(name, value); err != nil {
 		log.Errorf(`Failed to set flag: %v`, err)
 	}
+}
+
+// GetRetryConfig returns the retry configuration from flags
+func GetRetryConfig(cmd *cobra.Command) (*retry.Config, error) {
+	flags := cmd.PersistentFlags()
+
+	enable, err := flags.GetBool("retry-enable")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get retry-enable flag: %w", err)
+	}
+
+	maxAttempts, err := flags.GetInt("retry-max-attempts")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get retry-max-attempts flag: %w", err)
+	}
+
+	initialDelay, err := flags.GetDuration("retry-initial-delay")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get retry-initial-delay flag: %w", err)
+	}
+
+	maxDelay, err := flags.GetDuration("retry-max-delay")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get retry-max-delay flag: %w", err)
+	}
+
+	// Validate retry configuration
+	if maxAttempts < 1 {
+		return nil, fmt.Errorf("retry-max-attempts must be at least 1, got %d", maxAttempts)
+	}
+	if maxAttempts > 100 {
+		log.Warnf("retry-max-attempts is very high (%d), consider reducing it", maxAttempts)
+	}
+
+	if initialDelay < 0 {
+		return nil, fmt.Errorf("retry-initial-delay must be non-negative, got %v", initialDelay)
+	}
+	if initialDelay > 5*time.Minute {
+		log.Warnf("retry-initial-delay is very long (%v), consider reducing it", initialDelay)
+	}
+
+	if maxDelay < 0 {
+		return nil, fmt.Errorf("retry-max-delay must be non-negative, got %v", maxDelay)
+	}
+	if maxDelay < initialDelay {
+		return nil, fmt.Errorf("retry-max-delay (%v) must be greater than or equal to retry-initial-delay (%v)", maxDelay, initialDelay)
+	}
+	if maxDelay > 1*time.Hour {
+		log.Warnf("retry-max-delay is very long (%v), consider reducing it", maxDelay)
+	}
+
+	config := retry.DefaultConfig()
+	config.EnableRetry = enable
+	config.MaxAttempts = uint64(maxAttempts)
+	config.InitialDelay = initialDelay
+	config.MaxDelay = maxDelay
+
+	return config, nil
 }

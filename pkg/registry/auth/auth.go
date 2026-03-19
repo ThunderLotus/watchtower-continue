@@ -99,6 +99,7 @@ func GetBearerHeader(challenge string, imageRef ref.Named, registryAuth string) 
 	if authResponse, err = client.Do(r); err != nil {
 		return "", err
 	}
+	defer authResponse.Body.Close()
 
 	body, _ := io.ReadAll(authResponse.Body)
 	tokenResponse := &types.TokenResponse{}

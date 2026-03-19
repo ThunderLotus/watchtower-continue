@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/containrrr/watchtower/internal/util"
 	wt "github.com/containrrr/watchtower/pkg/types"
@@ -27,31 +28,35 @@ func NewContainer(containerInfo *types.ContainerJSON, imageInfo *types.ImageInsp
 
 // Container represents a running Docker container.
 type Container struct {
-	LinkedToRestarting bool
-	Stale              bool
-
+	// Put pointer fields first to ensure proper alignment
 	containerInfo *types.ContainerJSON
 	imageInfo     *types.ImageInspect
+
+	// Use atomic.Bool for thread-safe boolean fields
+	// Add padding between them to avoid false positives from race detector
+	LinkedToRestarting atomic.Bool
+	_                 [4]byte // padding
+	Stale              atomic.Bool
 }
 
 // IsLinkedToRestarting returns the current value of the LinkedToRestarting field for the container
 func (c *Container) IsLinkedToRestarting() bool {
-	return c.LinkedToRestarting
+	return c.LinkedToRestarting.Load()
 }
 
 // IsStale returns the current value of the Stale field for the container
 func (c *Container) IsStale() bool {
-	return c.Stale
+	return c.Stale.Load()
 }
 
 // SetLinkedToRestarting sets the LinkedToRestarting field for the container
 func (c *Container) SetLinkedToRestarting(value bool) {
-	c.LinkedToRestarting = value
+	c.LinkedToRestarting.Store(value)
 }
 
 // SetStale implements sets the Stale field for the container
 func (c *Container) SetStale(value bool) {
-	c.Stale = value
+	c.Stale.Store(value)
 }
 
 // ContainerInfo fetches JSON info for the container
@@ -67,31 +72,31 @@ func (c Container) ID() wt.ContainerID {
 // IsRunning returns a boolean flag indicating whether or not the current
 // container is running. The status is determined by the value of the
 // container's "State.Running" property.
-func (c Container) IsRunning() bool {
+func (c *Container) IsRunning() bool {
 	return c.containerInfo.State.Running
 }
 
 // IsRestarting returns a boolean flag indicating whether or not the current
 // container is restarting. The status is determined by the value of the
 // container's "State.Restarting" property.
-func (c Container) IsRestarting() bool {
+func (c *Container) IsRestarting() bool {
 	return c.containerInfo.State.Restarting
 }
 
 // Name returns the Docker container name.
-func (c Container) Name() string {
+func (c *Container) Name() string {
 	return c.containerInfo.Name
 }
 
 // ImageID returns the ID of the Docker image that was used to start the
 // container. May cause nil dereference if imageInfo is not set!
-func (c Container) ImageID() wt.ImageID {
+func (c *Container) ImageID() wt.ImageID {
 	return wt.ImageID(c.imageInfo.ID)
 }
 
 // SafeImageID returns the ID of the Docker image that was used to start the container if available,
 // otherwise returns an empty string
-func (c Container) SafeImageID() wt.ImageID {
+func (c *Container) SafeImageID() wt.ImageID {
 	if c.imageInfo == nil {
 		return ""
 	}
@@ -101,12 +106,8 @@ func (c Container) SafeImageID() wt.ImageID {
 // ImageName returns the name of the Docker image that was used to start the
 // container. If the original image was specified without a particular tag, the
 // "latest" tag is assumed.
-func (c Container) ImageName() string {
-	// Compatibility w/ Zodiac deployments
-	imageName, ok := c.getLabelValue(zodiacLabel)
-	if !ok {
-		imageName = c.containerInfo.Config.Image
-	}
+func (c *Container) ImageName() string {
+	imageName := c.containerInfo.Config.Image
 
 	if !strings.Contains(imageName, ":") {
 		imageName = fmt.Sprintf("%s:latest", imageName)
@@ -207,8 +208,8 @@ func (c Container) Links() []string {
 
 // ToRestart return whether the container should be restarted, either because
 // is stale or linked to another stale container.
-func (c Container) ToRestart() bool {
-	return c.Stale || c.LinkedToRestarting
+func (c *Container) ToRestart() bool {
+	return c.Stale.Load() || c.LinkedToRestarting.Load()
 }
 
 // IsWatchtower returns a boolean flag indicating whether or not the current
@@ -285,62 +286,65 @@ func (c Container) GetCreateConfig() *dockercontainer.Config {
 	hostConfig := c.containerInfo.HostConfig
 	imageConfig := c.imageInfo.Config
 
-	if config.WorkingDir == imageConfig.WorkingDir {
-		config.WorkingDir = ""
-	}
-
-	if config.User == imageConfig.User {
-		config.User = ""
-	}
-
+	// Handle container network mode
 	if hostConfig.NetworkMode.IsContainer() {
 		config.Hostname = ""
 	}
 
-	if util.SliceEqual(config.Entrypoint, imageConfig.Entrypoint) {
-		config.Entrypoint = nil
-		if util.SliceEqual(config.Cmd, imageConfig.Cmd) {
-			config.Cmd = nil
+	// Only process if image config is available
+	if imageConfig != nil {
+		// Clear fields that match image defaults
+		if config.WorkingDir == imageConfig.WorkingDir {
+			config.WorkingDir = ""
+		}
+		if config.User == imageConfig.User {
+			config.User = ""
+		}
+
+		// Clear entrypoint and cmd if they match image defaults
+		if util.SliceEqual(config.Entrypoint, imageConfig.Entrypoint) {
+			config.Entrypoint = nil
+			if util.SliceEqual(config.Cmd, imageConfig.Cmd) {
+				config.Cmd = nil
+			}
+		}
+
+		// Clear HEALTHCHECK configuration if it matches image defaults
+		if config.Healthcheck != nil && imageConfig.Healthcheck != nil {
+			if util.SliceEqual(config.Healthcheck.Test, imageConfig.Healthcheck.Test) {
+				config.Healthcheck.Test = nil
+			}
+			if config.Healthcheck.Retries == imageConfig.Healthcheck.Retries {
+				config.Healthcheck.Retries = 0
+			}
+			if config.Healthcheck.Interval == imageConfig.Healthcheck.Interval {
+				config.Healthcheck.Interval = 0
+			}
+			if config.Healthcheck.Timeout == imageConfig.Healthcheck.Timeout {
+				config.Healthcheck.Timeout = 0
+			}
+			if config.Healthcheck.StartPeriod == imageConfig.Healthcheck.StartPeriod {
+				config.Healthcheck.StartPeriod = 0
+			}
+		}
+
+		// Subtract image defaults from container config
+		config.Env = util.SliceSubtract(config.Env, imageConfig.Env)
+		config.Labels = util.StringMapSubtract(config.Labels, imageConfig.Labels)
+		config.Volumes = util.StructMapSubtract(config.Volumes, imageConfig.Volumes)
+
+		// Subtract ports exposed in image from container
+		for k := range config.ExposedPorts {
+			if _, ok := imageConfig.ExposedPorts[string(k)]; ok {
+				delete(config.ExposedPorts, k)
+			}
 		}
 	}
 
-	// Clear HEALTHCHECK configuration (if default)
-	if config.Healthcheck != nil && imageConfig.Healthcheck != nil {
-		if util.SliceEqual(config.Healthcheck.Test, imageConfig.Healthcheck.Test) {
-			config.Healthcheck.Test = nil
-		}
-
-		if config.Healthcheck.Retries == imageConfig.Healthcheck.Retries {
-			config.Healthcheck.Retries = 0
-		}
-
-		if config.Healthcheck.Interval == imageConfig.Healthcheck.Interval {
-			config.Healthcheck.Interval = 0
-		}
-
-		if config.Healthcheck.Timeout == imageConfig.Healthcheck.Timeout {
-			config.Healthcheck.Timeout = 0
-		}
-
-		if config.Healthcheck.StartPeriod == imageConfig.Healthcheck.StartPeriod {
-			config.Healthcheck.StartPeriod = 0
-		}
-	}
-
-	config.Env = util.SliceSubtract(config.Env, imageConfig.Env)
-
-	config.Labels = util.StringMapSubtract(config.Labels, imageConfig.Labels)
-
-	config.Volumes = util.StructMapSubtract(config.Volumes, imageConfig.Volumes)
-
-	// subtract ports exposed in image from container
-	for k := range config.ExposedPorts {
-		if _, ok := imageConfig.ExposedPorts[k]; ok {
-			delete(config.ExposedPorts, k)
-		}
-	}
+	// Add ports from host config port bindings
 	for p := range c.containerInfo.HostConfig.PortBindings {
-		config.ExposedPorts[p] = struct{}{}
+		port := nat.Port(string(p))
+		config.ExposedPorts[port] = struct{}{}
 	}
 
 	config.Image = c.ImageName()

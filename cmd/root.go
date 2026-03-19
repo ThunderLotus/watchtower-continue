@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"errors"
 	"math"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,9 +12,6 @@ import (
 	"github.com/containrrr/watchtower/internal/actions"
 	"github.com/containrrr/watchtower/internal/flags"
 	"github.com/containrrr/watchtower/internal/meta"
-	"github.com/containrrr/watchtower/pkg/api"
-	apiMetrics "github.com/containrrr/watchtower/pkg/api/metrics"
-	"github.com/containrrr/watchtower/pkg/api/update"
 	"github.com/containrrr/watchtower/pkg/container"
 	"github.com/containrrr/watchtower/pkg/filters"
 	"github.com/containrrr/watchtower/pkg/metrics"
@@ -73,25 +68,44 @@ func init() {
 func Execute() {
 	rootCmd.AddCommand(notifyUpgradeCommand)
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 }
 
 // PreRun is a lifecycle hook that runs before the command is executed.
 func PreRun(cmd *cobra.Command, _ []string) {
 	f := cmd.PersistentFlags()
-	flags.ProcessFlagAliases(f)
+	if err := flags.ProcessFlagAliases(f); err != nil {
+		log.Errorf("Failed to process flag aliases: %v", err)
+		os.Exit(1)
+		return
+	}
 	if err := flags.SetupLogging(f); err != nil {
-		log.Fatalf("Failed to initialize logging: %s", err.Error())
+		log.Errorf("Failed to initialize logging: %v", err)
+		os.Exit(1)
+		return
 	}
 
 	scheduleSpec, _ = f.GetString("schedule")
 
-	flags.GetSecretsFromFiles(cmd)
-	cleanup, noRestart, monitorOnly, timeout = flags.ReadFlags(cmd)
+	if err := flags.GetSecretsFromFiles(cmd); err != nil {
+		log.Errorf("Failed to get secrets from files: %v", err)
+		os.Exit(1)
+		return
+	}
+	var err error
+	cleanup, noRestart, monitorOnly, timeout, err = flags.ReadFlags(cmd)
+	if err != nil {
+		log.Errorf("Failed to read flags: %v", err)
+		os.Exit(1)
+		return
+	}
 
 	if timeout < 0 {
-		log.Fatal("Please specify a positive value for timeout value.")
+		log.Error("Please specify a positive value for timeout value.")
+		os.Exit(1)
+		return
 	}
 
 	enableLabel, _ = f.GetBool("label-enable")
@@ -106,9 +120,10 @@ func PreRun(cmd *cobra.Command, _ []string) {
 	}
 
 	// configure environment vars for client
-	err := flags.EnvConfig(cmd)
-	if err != nil {
-		log.Fatal(err)
+	if err := flags.EnvConfig(cmd); err != nil {
+		log.Errorf("Failed to configure environment: %v", err)
+		os.Exit(1)
+		return
 	}
 
 	noPull, _ = f.GetBool("no-pull")
@@ -122,13 +137,18 @@ func PreRun(cmd *cobra.Command, _ []string) {
 		log.Warn("Using `WATCHTOWER_NO_PULL` and `WATCHTOWER_MONITOR_ONLY` simultaneously might lead to no action being taken at all. If this is intentional, you may safely ignore this message.")
 	}
 
-	client = container.NewClient(container.ClientOptions{
+	client, err = container.NewClient(container.ClientOptions{
 		IncludeStopped:    includeStopped,
 		ReviveStopped:     reviveStopped,
 		RemoveVolumes:     removeVolumes,
 		IncludeRestarting: includeRestarting,
 		WarnOnHeadFailed:  container.WarningStrategy(warnOnHeadPullFailed),
 	})
+	if err != nil {
+		log.Errorf("Error creating Docker client: %v", err)
+		os.Exit(1)
+		return
+	}
 
 	notifier = notifications.NewNotifier(cmd)
 	notifier.AddLogHook()
@@ -138,23 +158,23 @@ func PreRun(cmd *cobra.Command, _ []string) {
 func Run(c *cobra.Command, names []string) {
 	filter, filterDesc := filters.BuildFilter(names, disableContainers, enableLabel, scope)
 	runOnce, _ := c.PersistentFlags().GetBool("run-once")
-	enableUpdateAPI, _ := c.PersistentFlags().GetBool("http-api-update")
-	enableMetricsAPI, _ := c.PersistentFlags().GetBool("http-api-metrics")
-	unblockHTTPAPI, _ := c.PersistentFlags().GetBool("http-api-periodic-polls")
-	apiToken, _ := c.PersistentFlags().GetString("http-api-token")
 	healthCheck, _ := c.PersistentFlags().GetBool("health-check")
 
 	if healthCheck {
 		// health check should not have pid 1
 		if os.Getpid() == 1 {
 			time.Sleep(1 * time.Second)
-			log.Fatal("The health check flag should never be passed to the main watchtower container process")
+			log.Error("The health check flag should never be passed to the main watchtower container process")
+			os.Exit(1)
+			return
 		}
 		os.Exit(0)
 	}
 
 	if rollingRestart && monitorOnly {
-		log.Fatal("Rolling restarts is not compatible with the global monitor only flag")
+		log.Error("Rolling restarts is not compatible with the global monitor only flag")
+		os.Exit(1)
+		return
 	}
 
 	awaitDockerClient()
@@ -175,33 +195,9 @@ func Run(c *cobra.Command, names []string) {
 		logNotifyExit(err)
 	}
 
-	// The lock is shared between the scheduler and the HTTP API. It only allows one update to run at a time.
+	// The lock is shared between the scheduler. It only allows one update to run at a time.
 	updateLock := make(chan bool, 1)
 	updateLock <- true
-
-	httpAPI := api.New(apiToken)
-
-	if enableUpdateAPI {
-		updateHandler := update.New(func(images []string) {
-			metric := runUpdatesWithNotifications(filters.FilterByImage(images, filter))
-			metrics.RegisterScan(metric)
-		}, updateLock)
-		httpAPI.RegisterFunc(updateHandler.Path, updateHandler.Handle)
-		// If polling isn't enabled the scheduler is never started, and
-		// we need to trigger the startup messages manually.
-		if !unblockHTTPAPI {
-			writeStartupMessage(c, time.Time{}, filterDesc)
-		}
-	}
-
-	if enableMetricsAPI {
-		metricsHandler := apiMetrics.New()
-		httpAPI.RegisterHandler(metricsHandler.Path, metricsHandler.Handle)
-	}
-
-	if err := httpAPI.Start(enableUpdateAPI && !unblockHTTPAPI); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Error("failed to start API", err)
-	}
 
 	if err := runUpgradesOnSchedule(c, filter, filterDesc, updateLock); err != nil {
 		log.Error(err)
@@ -262,11 +258,10 @@ func formatDuration(d time.Duration) string {
 
 func writeStartupMessage(c *cobra.Command, sched time.Time, filtering string) {
 	noStartupMessage, _ := c.PersistentFlags().GetBool("no-startup-message")
-	enableUpdateAPI, _ := c.PersistentFlags().GetBool("http-api-update")
 
 	var startupLog *log.Entry
 	if noStartupMessage {
-		startupLog = notifications.LocalLog
+		startupLog = log.NewEntry(log.StandardLogger())
 	} else {
 		startupLog = log.NewEntry(log.StandardLogger())
 		// Batch up startup messages to send them as a single notification
@@ -292,11 +287,6 @@ func writeStartupMessage(c *cobra.Command, sched time.Time, filtering string) {
 		startupLog.Info("Running a one time update.")
 	} else {
 		startupLog.Info("Periodic runs are not enabled.")
-	}
-
-	if enableUpdateAPI {
-		// TODO: make listen port configurable
-		startupLog.Info("The HTTP API is enabled at :8080.")
 	}
 
 	if !noStartupMessage {
@@ -375,7 +365,8 @@ func runUpdatesWithNotifications(filter t.Filter) *metrics.Metric {
 	}
 	notifier.SendNotification(result)
 	metricResults := metrics.NewMetric(result)
-	notifications.LocalLog.WithFields(log.Fields{
+
+	log.WithFields(log.Fields{
 		"Scanned": metricResults.Scanned,
 		"Updated": metricResults.Updated,
 		"Failed":  metricResults.Failed,

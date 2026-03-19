@@ -3,6 +3,7 @@ package container
 import (
 	"github.com/docker/docker/api/types"
 	dockerContainer "github.com/docker/docker/api/types/container"
+	dockerspec "github.com/moby/docker-image-spec/specs-go/v1"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -21,8 +22,7 @@ func MockContainer(updates ...MockContainerUpdate) *Container {
 		},
 	}
 	image := types.ImageInspect{
-		ID:     "image_id",
-		Config: &dockerContainer.Config{},
+		ID: "image_id",
 	}
 
 	for _, update := range updates {
@@ -74,6 +74,15 @@ func WithHealthcheck(healthConfig dockerContainer.HealthConfig) MockContainerUpd
 
 func WithImageHealthcheck(healthConfig dockerContainer.HealthConfig) MockContainerUpdate {
 	return func(cnt *types.ContainerJSON, img *types.ImageInspect) {
-		img.Config.Healthcheck = &healthConfig
+		if img.Config == nil {
+			img.Config = &dockerspec.DockerOCIImageConfig{}
+		}
+		img.Config.Healthcheck = &dockerspec.HealthcheckConfig{
+			Test:        healthConfig.Test,
+			Interval:    healthConfig.Interval,
+			Timeout:     healthConfig.Timeout,
+			StartPeriod: healthConfig.StartPeriod,
+			Retries:     healthConfig.Retries,
+		}
 	}
 }

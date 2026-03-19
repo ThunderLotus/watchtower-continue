@@ -1,0 +1,27 @@
+# 基于 watchtower 官方镜像构建兼容版本
+FROM containrrr/watchtower:latest
+
+# 元数据标签
+LABEL version="compat-v1.0" \
+      description="Watchtower with automatic Docker API version compatibility" \
+      compatibility="auto-detection,multi-version" \
+      min.docker.version="20.10" \
+      recommended.docker.version="24.0"
+
+# 添加标签
+LABEL "com.centurylinklabs.watchtower"="true"
+LABEL "docker.sdk.version"="28.5.2"
+LABEL "docker.cli.version"="29.3.0"
+LABEL "go.version"="1.25.8"
+LABEL "api.negotiation"="auto"
+LABEL "api.supported.range"="1.25-1.46+"
+
+# 替换二进制文件
+COPY --chmod=755 watchtower-compat /watchtower
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD ["/watchtower", "--health-check"]
+
+# 入口点
+ENTRYPOINT ["/watchtower"]

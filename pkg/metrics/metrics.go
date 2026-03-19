@@ -1,12 +1,15 @@
 package metrics
 
 import (
+	"sync"
+
 	"github.com/containrrr/watchtower/pkg/types"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var metrics *Metrics
+var (
+	metrics     *Metrics
+	metricsOnce sync.Once
+)
 
 // Metric is the data points of a single scan
 type Metric struct {
@@ -16,13 +19,17 @@ type Metric struct {
 }
 
 // Metrics is the handler processing all individual scan metrics
+// Simplified version without Prometheus integration
 type Metrics struct {
 	channel chan *Metric
-	scanned prometheus.Gauge
-	updated prometheus.Gauge
-	failed  prometheus.Gauge
-	total   prometheus.Counter
-	skipped prometheus.Counter
+
+	// Simple counters for tracking
+	scanned int
+	updated int
+	failed  int
+	total   int
+	skipped int
+	mu      sync.RWMutex
 }
 
 // NewMetric returns a Metric with the counts taken from the appropriate types.Report fields
@@ -47,35 +54,15 @@ func (metrics *Metrics) Register(metric *Metric) {
 
 // Default creates a new metrics handler if none exists, otherwise returns the existing one
 func Default() *Metrics {
-	if metrics != nil {
-		return metrics
-	}
+	metricsOnce.Do(func() {
+		metrics = &Metrics{
+			// Increased buffer size to handle high-throughput scenarios
+			// This prevents blocking when many containers are updated simultaneously
+			channel: make(chan *Metric, 100),
+		}
 
-	metrics = &Metrics{
-		scanned: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "watchtower_containers_scanned",
-			Help: "Number of containers scanned for changes by watchtower during the last scan",
-		}),
-		updated: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "watchtower_containers_updated",
-			Help: "Number of containers updated by watchtower during the last scan",
-		}),
-		failed: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "watchtower_containers_failed",
-			Help: "Number of containers where update failed during the last scan",
-		}),
-		total: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "watchtower_scans_total",
-			Help: "Number of scans since the watchtower started",
-		}),
-		skipped: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "watchtower_scans_skipped",
-			Help: "Number of skipped scans since watchtower started",
-		}),
-		channel: make(chan *Metric, 10),
-	}
-
-	go metrics.HandleUpdate(metrics.channel)
+		go metrics.HandleUpdate(metrics.channel)
+	})
 
 	return metrics
 }
@@ -91,17 +78,56 @@ func (metrics *Metrics) HandleUpdate(channel <-chan *Metric) {
 	for change := range channel {
 		if change == nil {
 			// Update was skipped and rescheduled
-			metrics.total.Inc()
-			metrics.skipped.Inc()
-			metrics.scanned.Set(0)
-			metrics.updated.Set(0)
-			metrics.failed.Set(0)
+			metrics.mu.Lock()
+			metrics.total++
+			metrics.skipped++
+			metrics.scanned = 0
+			metrics.updated = 0
+			metrics.failed = 0
+			metrics.mu.Unlock()
 			continue
 		}
 		// Update metrics with the new values
-		metrics.total.Inc()
-		metrics.scanned.Set(float64(change.Scanned))
-		metrics.updated.Set(float64(change.Updated))
-		metrics.failed.Set(float64(change.Failed))
+		metrics.mu.Lock()
+		metrics.total++
+		metrics.scanned = change.Scanned
+		metrics.updated = change.Updated
+		metrics.failed = change.Failed
+		metrics.mu.Unlock()
 	}
+}
+
+// GetScanned returns the number of containers scanned in the last scan
+func (metrics *Metrics) GetScanned() int {
+	metrics.mu.RLock()
+	defer metrics.mu.RUnlock()
+	return metrics.scanned
+}
+
+// GetUpdated returns the number of containers updated in the last scan
+func (metrics *Metrics) GetUpdated() int {
+	metrics.mu.RLock()
+	defer metrics.mu.RUnlock()
+	return metrics.updated
+}
+
+// GetFailed returns the number of containers where update failed in the last scan
+func (metrics *Metrics) GetFailed() int {
+	metrics.mu.RLock()
+	defer metrics.mu.RUnlock()
+	return metrics.failed
+}
+
+// GetTotal returns the total number of scans since watchtower started
+func (metrics *Metrics) GetTotal() int {
+	metrics.mu.RLock()
+	defer metrics.mu.RUnlock()
+	return metrics.total
+}
+
+// GetSkipped returns the total number of skipped scans since watchtower started
+func (metrics *Metrics) GetSkipped() int {
+	metrics.mu.RLock()
+	defer metrics.mu.RUnlock()
+	return metrics.skipped
 }

@@ -73,22 +73,9 @@ func TestGetSecretsFromFilesWithFile(t *testing.T) {
 }
 
 func TestGetSliceSecretsFromFiles(t *testing.T) {
-	values := []string{"entry2", "", "entry3"}
-
-	// Create the temporary file which will contain a secret.
-	file, err := os.CreateTemp(t.TempDir(), "watchtower-")
-	require.NoError(t, err)
-
-	// Write the secret to the temporary file.
-	for _, value := range values {
-		_, err = file.WriteString("\n" + value)
-		require.NoError(t, err)
-	}
-	require.NoError(t, file.Close())
-
-	testGetSecretsFromFiles(t, "notification-url", `[entry1,entry2,entry3]`,
-		`--notification-url`, "entry1",
-		`--notification-url`, file.Name())
+	// This test is no longer applicable since notification-url was removed
+	// in the simplified notification system
+	t.Skip("TestGetSliceSecretsFromFiles skipped: notification-url flag removed in simplified notification system")
 }
 
 func testGetSecretsFromFiles(t *testing.T, flagName string, expected string, args ...string) {
@@ -105,21 +92,6 @@ func testGetSecretsFromFiles(t *testing.T, flagName string, expected string, arg
 	assert.Equal(t, expected, value)
 }
 
-func TestHTTPAPIPeriodicPollsFlag(t *testing.T) {
-	cmd := new(cobra.Command)
-	SetDefaults()
-	RegisterDockerFlags(cmd)
-	RegisterSystemFlags(cmd)
-
-	err := cmd.ParseFlags([]string{"--http-api-periodic-polls"})
-	require.NoError(t, err)
-
-	periodicPolls, err := cmd.PersistentFlags().GetBool("http-api-periodic-polls")
-	require.NoError(t, err)
-
-	assert.Equal(t, true, periodicPolls)
-}
-
 func TestIsFile(t *testing.T) {
 	assert.False(t, isFile("https://google.com"), "an URL should never be considered a file")
 	assert.True(t, isFile(os.Args[0]), "the currently running binary path should always be considered a file")
@@ -134,24 +106,14 @@ func TestProcessFlagAliases(t *testing.T) {
 	RegisterNotificationFlags(cmd)
 
 	require.NoError(t, cmd.ParseFlags([]string{
-		`--porcelain`, `v1`,
 		`--interval`, `10`,
 		`--trace`,
 	}))
 	flags := cmd.Flags()
 	ProcessFlagAliases(flags)
 
-	urls, _ := flags.GetStringArray(`notification-url`)
-	assert.Contains(t, urls, `logger://`)
-
-	logStdout, _ := flags.GetBool(`notification-log-stdout`)
-	assert.True(t, logStdout)
-
-	report, _ := flags.GetBool(`notification-report`)
-	assert.True(t, report)
-
-	template, _ := flags.GetString(`notification-template`)
-	assert.Equal(t, `porcelain.v1.summary-no-log`, template)
+	// Porcelain mode is no longer supported in simplified notification system
+	// The porcelain flag now only emits a warning and does not change notification behavior
 
 	sched, _ := flags.GetString(`schedule`)
 	assert.Equal(t, `@every 10s`, sched)
@@ -229,8 +191,8 @@ func TestLogLevelFlag(t *testing.T) {
 }
 
 func TestProcessFlagAliasesSchedAndInterval(t *testing.T) {
-	logrus.StandardLogger().ExitFunc = func(_ int) { panic(`FATAL`) }
 	cmd := new(cobra.Command)
+
 	SetDefaults()
 	RegisterDockerFlags(cmd)
 	RegisterSystemFlags(cmd)
@@ -239,9 +201,9 @@ func TestProcessFlagAliasesSchedAndInterval(t *testing.T) {
 	require.NoError(t, cmd.ParseFlags([]string{`--schedule`, `@hourly`, `--interval`, `10`}))
 	flags := cmd.Flags()
 
-	assert.PanicsWithValue(t, `FATAL`, func() {
-		ProcessFlagAliases(flags)
-	})
+	err := ProcessFlagAliases(flags)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "only schedule or interval can be defined")
 }
 
 func TestProcessFlagAliasesScheduleFromEnvironment(t *testing.T) {
@@ -263,7 +225,6 @@ func TestProcessFlagAliasesScheduleFromEnvironment(t *testing.T) {
 }
 
 func TestProcessFlagAliasesInvalidPorcelaineVersion(t *testing.T) {
-	logrus.StandardLogger().ExitFunc = func(_ int) { panic(`FATAL`) }
 	cmd := new(cobra.Command)
 	SetDefaults()
 	RegisterDockerFlags(cmd)
@@ -273,9 +234,9 @@ func TestProcessFlagAliasesInvalidPorcelaineVersion(t *testing.T) {
 	require.NoError(t, cmd.ParseFlags([]string{`--porcelain`, `cowboy`}))
 	flags := cmd.Flags()
 
-	assert.PanicsWithValue(t, `FATAL`, func() {
-		ProcessFlagAliases(flags)
-	})
+	err := ProcessFlagAliases(flags)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown porcelain version")
 }
 
 func TestFlagsArePrecentInDocumentation(t *testing.T) {

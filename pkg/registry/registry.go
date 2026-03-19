@@ -1,29 +1,55 @@
 package registry
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/containrrr/watchtower/pkg/registry/helpers"
+	"github.com/containrrr/watchtower/pkg/retry"
 	watchtowerTypes "github.com/containrrr/watchtower/pkg/types"
 	ref "github.com/distribution/reference"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	log "github.com/sirupsen/logrus"
 )
 
 // GetPullOptions creates a struct with all options needed for pulling images from a registry
-func GetPullOptions(imageName string) (types.ImagePullOptions, error) {
-	auth, err := EncodedAuth(imageName)
-	log.Debugf("Got image name: %s", imageName)
-	if err != nil {
-		return types.ImagePullOptions{}, err
+func GetPullOptions(imageName string) (image.PullOptions, error) {
+	// Enhanced logging for registry authentication
+	authEntry := log.WithFields(log.Fields{
+		"image_name": imageName,
+		"module":     "registry",
+		"operation":  "get_pull_options",
+	})
+
+	// Use retry logic for authentication
+	config := retry.DefaultConfig()
+
+	var auth string
+	var err error
+
+	authFn := func() error {
+		auth, err = EncodedAuth(imageName)
+		authEntry.Debugf("Processing image name: %s", imageName)
+		return err
+	}
+
+	_, retryErr := retry.WithRetry(context.Background(), config, fmt.Sprintf("registry_auth_%s", imageName), authFn)
+	if retryErr != nil {
+		authEntry.WithError(retryErr).Error("Failed to get registry authentication")
+		return image.PullOptions{}, retryErr
 	}
 
 	if auth == "" {
-		return types.ImagePullOptions{}, nil
+		authEntry.Debug("No authentication credentials required")
+		return image.PullOptions{}, nil
 	}
+
+	authEntry.Debug("Authentication credentials retrieved successfully")
 
 	// CREDENTIAL: Uncomment to log docker config auth
 	// log.Tracef("Got auth value: %s", auth)
 
-	return types.ImagePullOptions{
+	return image.PullOptions{
 		RegistryAuth:  auth,
 		PrivilegeFunc: DefaultAuthHandler,
 	}, nil
@@ -32,8 +58,11 @@ func GetPullOptions(imageName string) (types.ImagePullOptions, error) {
 // DefaultAuthHandler will be invoked if an AuthConfig is rejected
 // It could be used to return a new value for the "X-Registry-Auth" authentication header,
 // but there's no point trying again with the same value as used in AuthConfig
-func DefaultAuthHandler() (string, error) {
-	log.Debug("Authentication request was rejected. Trying again without authentication")
+func DefaultAuthHandler(ctx context.Context) (string, error) {
+	log.WithFields(log.Fields{
+		"module":    "registry",
+		"operation": "auth_handler",
+	}).Debug("Authentication request was rejected, trying again without authentication")
 	return "", nil
 }
 

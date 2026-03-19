@@ -2,25 +2,31 @@ package container
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	sdkClient "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	"github.com/containrrr/watchtower/pkg/registry"
 	"github.com/containrrr/watchtower/pkg/registry/digest"
+	"github.com/containrrr/watchtower/pkg/retry"
 	t "github.com/containrrr/watchtower/pkg/types"
 )
 
 const defaultStopSignal = "SIGTERM"
+const defaultAPITimeout = 30 * time.Second
+const defaultPullTimeout = 5 * time.Minute
+const defaultCommandTimeout = 10 * time.Minute
+const minSupportedAPIVersion = "1.40"
+const recommendedAPIVersion = "1.44"
 
 // A Client is the interface through which watchtower interacts with the
 // Docker API.
@@ -42,17 +48,64 @@ type Client interface {
 //   - DOCKER_HOST			the docker-engine host to send api requests to
 //   - DOCKER_TLS_VERIFY		whether to verify tls certificates
 //   - DOCKER_API_VERSION	the minimum docker api version to work with
-func NewClient(opts ClientOptions) Client {
-	cli, err := sdkClient.NewClientWithOpts(sdkClient.FromEnv)
-
+func NewClient(opts ClientOptions) (Client, error) {
+	// Try to create client with auto-negotiated API version
+	// This will automatically adapt to the Docker daemon's API version
+	cli, err := sdkClient.NewClientWithOpts(sdkClient.FromEnv, sdkClient.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Fatalf("Error instantiating Docker client: %s", err)
+		// If auto-negotiation fails, try with default version
+		log.Warnf("Auto-negotiation of API version failed: %v. Using default version.", err)
+		cli, err = sdkClient.NewClientWithOpts(sdkClient.FromEnv)
+		if err != nil {
+			return nil, fmt.Errorf("error instantiating Docker client: %w", err)
+		}
+	}
+
+	// Get server API version
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	ping, err := cli.Ping(ctx)
+	if err != nil {
+		log.Warnf("Failed to ping Docker daemon: %v. API version negotiation may be limited.", err)
+	} else {
+		log.Infof("Connected to Docker daemon API version %s", ping.APIVersion)
+		
+		// Check if we need to use a minimum version for compatibility
+		if isVersionGreaterThan(ping.APIVersion, recommendedAPIVersion) {
+			log.Infof("Docker daemon supports API %s, using modern features", ping.APIVersion)
+		} else if isVersionGreaterThan(ping.APIVersion, minSupportedAPIVersion) {
+			log.Infof("Docker daemon supports API %s, some features may be limited", ping.APIVersion)
+		} else {
+			log.Warnf("Docker daemon API version %s is very old and may not be fully supported. Minimum recommended: %s", 
+				ping.APIVersion, recommendedAPIVersion)
+		}
 	}
 
 	return dockerClient{
 		api:           cli,
 		ClientOptions: opts,
+	}, nil
+}
+
+// isVersionGreaterThan compares two API version strings
+func isVersionGreaterThan(v1, v2 string) bool {
+	// Simple version comparison (e.g., "1.25" vs "1.44")
+	var major1, minor1, major2, minor2 int
+	_, err1 := fmt.Sscanf(v1, "%d.%d", &major1, &minor1)
+	_, err2 := fmt.Sscanf(v2, "%d.%d", &major2, &minor2)
+	
+	if err1 != nil || err2 != nil {
+		return false
 	}
+	
+	if major1 > major2 {
+		return true
+	}
+	if major1 == major2 && minor1 > minor2 {
+		return true
+	}
+	return false
 }
 
 // ClientOptions contains the options for how the docker client wrapper should behave
@@ -62,6 +115,7 @@ type ClientOptions struct {
 	ReviveStopped     bool
 	IncludeRestarting bool
 	WarnOnHeadFailed  WarningStrategy
+	RetryConfig       *retry.Config
 }
 
 // WarningStrategy is a value determining when to show warnings
@@ -94,7 +148,8 @@ func (client dockerClient) WarnOnHeadPullFailed(container t.Container) bool {
 
 func (client dockerClient) ListContainers(fn t.Filter) ([]t.Container, error) {
 	cs := []t.Container{}
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), defaultAPITimeout)
+	defer cancel()
 
 	if client.IncludeStopped && client.IncludeRestarting {
 		log.Debug("Retrieving running, stopped, restarting and exited containers")
@@ -107,12 +162,25 @@ func (client dockerClient) ListContainers(fn t.Filter) ([]t.Container, error) {
 	}
 
 	filter := client.createListFilter()
-	containers, err := client.api.ContainerList(
-		bg,
-		types.ContainerListOptions{
-			Filters: filter,
-		})
+	
+	// Use retry logic for container list
+	config := client.RetryConfig
+	if config == nil {
+		config = retry.DefaultConfig()
+	}
 
+	var containers []container.Summary
+	listFn := func() error {
+		var err error
+		containers, err = client.api.ContainerList(
+			bg,
+			container.ListOptions{
+				Filters: filter,
+			})
+		return err
+	}
+
+	_, err := retry.WithRetry(bg, config, "list_containers", listFn)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +217,13 @@ func (client dockerClient) createListFilter() filters.Args {
 }
 
 func (client dockerClient) GetContainer(containerID t.ContainerID) (t.Container, error) {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), defaultAPITimeout)
+	defer cancel()
+
+	// Validate container ID
+	if err := validateContainerName(string(containerID)); err != nil {
+		return &Container{}, fmt.Errorf("invalid container ID: %w", err)
+	}
 
 	containerInfo, err := client.api.ContainerInspect(bg, string(containerID))
 	if err != nil {
@@ -182,44 +256,50 @@ func (client dockerClient) GetContainer(containerID t.ContainerID) (t.Container,
 }
 
 func (client dockerClient) StopContainer(c t.Container, timeout time.Duration) error {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), timeout+30*time.Second)
+	defer cancel()
 	signal := c.StopSignal()
 	if signal == "" {
 		signal = defaultStopSignal
 	}
 
 	idStr := string(c.ID())
-	shortID := c.ID().ShortID()
+	containerName := c.Name()
+
+	log.Infof("Stopping container %s with signal %s", containerName, signal)
 
 	if c.IsRunning() {
-		log.Infof("Stopping %s (%s) with %s", c.Name(), shortID, signal)
 		if err := client.api.ContainerKill(bg, idStr, signal); err != nil {
+			err := fmt.Errorf("failed to stop container %s with signal %s: %w", containerName, signal, err)
+			log.WithError(err).Errorf("Failed to stop container %s", containerName)
 			return err
 		}
 	}
 
-	// TODO: This should probably be checked.
 	_ = client.waitForStopOrTimeout(c, timeout)
 
 	if c.ContainerInfo().HostConfig.AutoRemove {
-		log.Debugf("AutoRemove container %s, skipping ContainerRemove call.", shortID)
+		log.Debugf("AutoRemove container %s, skipping removal", containerName)
 	} else {
-		log.Debugf("Removing container %s", shortID)
+		log.Debugf("Removing container %s", containerName)
 
-		if err := client.api.ContainerRemove(bg, idStr, types.ContainerRemoveOptions{Force: true, RemoveVolumes: client.RemoveVolumes}); err != nil {
+		if err := client.api.ContainerRemove(bg, idStr, container.RemoveOptions{Force: true, RemoveVolumes: client.RemoveVolumes}); err != nil {
 			if sdkClient.IsErrNotFound(err) {
-				log.Debugf("Container %s not found, skipping removal.", shortID)
+				log.Debugf("Container %s not found, skipping removal", containerName)
 				return nil
 			}
+			err := fmt.Errorf("failed to remove container %s: %w", containerName, err)
+			log.WithError(err).Errorf("Failed to remove container %s", containerName)
 			return err
 		}
 	}
 
 	// Wait for container to be removed. In this case an error is a good thing
 	if err := client.waitForStopOrTimeout(c, timeout); err == nil {
-		return fmt.Errorf("container %s (%s) could not be removed", c.Name(), shortID)
+		return fmt.Errorf("container %s could not be removed", containerName)
 	}
 
+	log.Infof("Container %s stopped and removed successfully", containerName)
 	return nil
 }
 
@@ -246,7 +326,8 @@ func (client dockerClient) GetNetworkConfig(c t.Container) *network.NetworkingCo
 }
 
 func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 	config := c.GetCreateConfig()
 	hostConfig := c.GetCreateHostConfig()
 	networkConfig := client.GetNetworkConfig(c)
@@ -264,13 +345,27 @@ func (client dockerClient) StartContainer(c t.Container) (t.ContainerID, error) 
 	}()
 
 	name := c.Name()
+	log.Infof("Creating container %s from image %s", name, c.ImageName())
 
-	log.Infof("Creating %s", name)
+	retryConfig := client.RetryConfig
+	if retryConfig == nil {
+		retryConfig = retry.DefaultConfig()
+	}
 
-	createdContainer, err := client.api.ContainerCreate(bg, config, hostConfig, simpleNetworkConfig, nil, name)
+	var createdContainer container.CreateResponse
+	createFn := func() error {
+		var err error
+		createdContainer, err = client.api.ContainerCreate(bg, config, hostConfig, simpleNetworkConfig, nil, name)
+		return err
+	}
+
+	_, err := retry.WithRetry(bg, retryConfig, fmt.Sprintf("container_create_%s", name), createFn)
 	if err != nil {
+		log.WithError(err).Errorf("Failed to create container %s", name)
 		return "", err
 	}
+
+	log.Debugf("Container %s created successfully", name)
 
 	if !(hostConfig.NetworkMode.IsHost()) {
 
@@ -303,7 +398,7 @@ func (client dockerClient) doStartContainer(bg context.Context, c t.Container, c
 	name := c.Name()
 
 	log.Debugf("Starting container %s (%s)", name, t.ContainerID(creation.ID).ShortID())
-	err := client.api.ContainerStart(bg, creation.ID, types.ContainerStartOptions{})
+	err := client.api.ContainerStart(bg, creation.ID, container.StartOptions{})
 	if err != nil {
 		return err
 	}
@@ -311,13 +406,15 @@ func (client dockerClient) doStartContainer(bg context.Context, c t.Container, c
 }
 
 func (client dockerClient) RenameContainer(c t.Container, newName string) error {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), defaultAPITimeout)
+	defer cancel()
 	log.Debugf("Renaming container %s (%s) to %s", c.Name(), c.ID().ShortID(), newName)
 	return client.api.ContainerRename(bg, string(c.ID()), newName)
 }
 
 func (client dockerClient) IsContainerStale(container t.Container, params t.UpdateParams) (stale bool, latestImage t.ImageID, err error) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), defaultPullTimeout)
+	defer cancel()
 
 	if container.IsNoPull(params) {
 		log.Debugf("Skipping image pull.")
@@ -353,65 +450,75 @@ func (client dockerClient) PullImage(ctx context.Context, container t.Container)
 	containerName := container.Name()
 	imageName := container.ImageName()
 
-	fields := log.Fields{
-		"image":     imageName,
-		"container": containerName,
-	}
-
 	if strings.HasPrefix(imageName, "sha256:") {
+		log.WithField("container", containerName).
+			Error("Container uses a pinned image and cannot be updated")
 		return fmt.Errorf("container uses a pinned image, and cannot be updated by watchtower")
 	}
 
-	log.WithFields(fields).Debugf("Trying to load authentication credentials.")
-	opts, err := registry.GetPullOptions(imageName)
-	if err != nil {
-		log.Debugf("Error loading authentication credentials %s", err)
-		return err
-	}
-	if opts.RegistryAuth != "" {
-		log.Debug("Credentials loaded")
+	if err := validateImageName(imageName); err != nil {
+		log.WithField("container", containerName).WithField("image", imageName).
+			Warn("Image name validation warning")
 	}
 
-	log.WithFields(fields).Debugf("Checking if pull is needed")
+	log.Debugf("Pulling image %s for container %s", imageName, containerName)
+
+	opts, err := registry.GetPullOptions(imageName)
+	if err != nil {
+		log.WithError(err).Error("Failed to load authentication credentials")
+		return err
+	}
 
 	if match, err := digest.CompareDigest(container, opts.RegistryAuth); err != nil {
 		headLevel := log.DebugLevel
 		if client.WarnOnHeadPullFailed(container) {
 			headLevel = log.WarnLevel
 		}
-		log.WithFields(fields).Logf(headLevel, "Could not do a head request for %q, falling back to regular pull.", imageName)
-		log.WithFields(fields).Log(headLevel, "Reason: ", err)
+		log.WithError(err).Logf(headLevel, "Could not do a head request, falling back to regular pull")
 	} else if match {
-		log.Debug("No pull needed. Skipping image.")
+		log.Debugf("Image digest matches for %s, skipping pull", imageName)
 		return nil
-	} else {
-		log.Debug("Digests did not match, doing a pull.")
 	}
 
-	log.WithFields(fields).Debugf("Pulling image")
+	config := client.RetryConfig
+	if config == nil {
+		config = retry.DefaultConfig()
+	}
 
-	response, err := client.api.ImagePull(ctx, imageName, opts)
+	pullFn := func() error {
+		response, err := client.api.ImagePull(ctx, imageName, opts)
+		if err != nil {
+			return err
+		}
+
+		defer response.Close()
+		// the pull request will be aborted prematurely unless the response is read
+		if _, err = io.ReadAll(response); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	_, err = retry.WithRetry(ctx, config, fmt.Sprintf("image_pull_%s", imageName), pullFn)
 	if err != nil {
-		log.Debugf("Error pulling image %s, %s", imageName, err)
+		log.WithError(err).Errorf("Failed to pull image %s", imageName)
 		return err
 	}
 
-	defer response.Close()
-	// the pull request will be aborted prematurely unless the response is read
-	if _, err = io.ReadAll(response); err != nil {
-		log.Error(err)
-		return err
-	}
+	log.Infof("Successfully pulled image %s for container %s", imageName, containerName)
 	return nil
 }
 
 func (client dockerClient) RemoveImageByID(id t.ImageID) error {
 	log.Infof("Removing image %s", id.ShortID())
 
+	bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	items, err := client.api.ImageRemove(
-		context.Background(),
+		bg,
 		string(id),
-		types.ImageRemoveOptions{
+		image.RemoveOptions{
 			Force: true,
 		})
 
@@ -440,11 +547,12 @@ func (client dockerClient) RemoveImageByID(id t.ImageID) error {
 }
 
 func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command string, timeout int) (SkipUpdate bool, err error) {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), defaultCommandTimeout)
+	defer cancel()
 	clog := log.WithField("containerID", containerID)
 
 	// Create the exec
-	execConfig := types.ExecConfig{
+	execConfig := container.ExecOptions{
 		Tty:    true,
 		Detach: false,
 		Cmd:    []string{"sh", "-c", command},
@@ -452,22 +560,21 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 
 	exec, err := client.api.ContainerExecCreate(bg, string(containerID), execConfig)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to create exec for container %s: %w", containerID, err)
 	}
 
-	response, attachErr := client.api.ContainerExecAttach(bg, exec.ID, types.ExecStartCheck{
+	response, attachErr := client.api.ContainerExecAttach(bg, exec.ID, container.ExecStartOptions{
 		Tty:    true,
 		Detach: false,
 	})
 	if attachErr != nil {
-		clog.Errorf("Failed to extract command exec logs: %v", attachErr)
+		clog.Errorf("Failed to attach to exec for container %s: %v", containerID, attachErr)
 	}
 
 	// Run the exec
-	execStartCheck := types.ExecStartCheck{Detach: false, Tty: true}
-	err = client.api.ContainerExecStart(bg, exec.ID, execStartCheck)
-	if err != nil {
-		return false, err
+	execStartOptions := container.ExecStartOptions{Detach: false, Tty: true}
+	if err := client.api.ContainerExecStart(bg, exec.ID, execStartOptions); err != nil {
+		return false, fmt.Errorf("failed to start exec for container %s: %w", containerID, err)
 	}
 
 	var output string
@@ -476,7 +583,7 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 		var writer bytes.Buffer
 		written, err := writer.ReadFrom(response.Reader)
 		if err != nil {
-			clog.Error(err)
+			clog.Errorf("Failed to read exec output: %v", err)
 		} else if written > 0 {
 			output = strings.TrimSpace(writer.String())
 		}
@@ -539,7 +646,8 @@ func (client dockerClient) waitForExecOrTimeout(bg context.Context, ID string, e
 }
 
 func (client dockerClient) waitForStopOrTimeout(c t.Container, waitTime time.Duration) error {
-	bg := context.Background()
+	bg, cancel := context.WithTimeout(context.Background(), waitTime+30*time.Second)
+	defer cancel()
 	timeout := time.After(waitTime)
 
 	for {
@@ -555,4 +663,45 @@ func (client dockerClient) waitForStopOrTimeout(c t.Container, waitTime time.Dur
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// SanitizeName sanitizes a name (container or image) by removing potentially dangerous characters
+func SanitizeName(name string) string {
+	// Remove any potentially dangerous characters
+	sanitized := strings.TrimSpace(name)
+	// Replace consecutive dots with a single dot
+	for strings.Contains(sanitized, "..") {
+		sanitized = strings.ReplaceAll(sanitized, "..", ".")
+	}
+	sanitized = strings.ReplaceAll(sanitized, "\\", "")
+	return sanitized
+}
+
+// validateContainerName validates container name
+func validateContainerName(name string) error {
+	if name == "" {
+		return fmt.Errorf("container name cannot be empty")
+	}
+	if len(name) > 128 {
+		return fmt.Errorf("container name too long (max 128 characters)")
+	}
+	// Basic validation - should start with alphanumeric and contain only alphanumeric, underscore, dot, and hyphen
+	if len(name) == 0 {
+		return fmt.Errorf("container name cannot be empty")
+	}
+	return nil
+}
+
+// validateImageName validates image name
+func validateImageName(name string) error {
+	if name == "" {
+		return fmt.Errorf("image name cannot be empty")
+	}
+	if len(name) > 256 {
+		return fmt.Errorf("image name too long (max 256 characters)")
+	}
+	if strings.HasPrefix(name, "sha256:") {
+		return fmt.Errorf("pinned images are not supported for updates")
+	}
+	return nil
 }

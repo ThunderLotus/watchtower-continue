@@ -1,14 +1,14 @@
 <div align="center">
 
-  ### ⚠️ This project is no longer maintained
-  See https://github.com/containrrr/watchtower/discussions/2135 for details.
+  ### ✅ Currently Maintained and Updated
+  Upgraded with Docker SDK v28.5.2 to support Docker Engine 29.x and beyond.
 
   ---
-  
+
   <img src="./logo.png" width="450" />
-  
+
   # Watchtower
-  
+
   A process for automating Docker container base image updates.
   <br/><br/>
   
@@ -23,6 +23,21 @@
   [![Pulls from DockerHub](https://img.shields.io/docker/pulls/containrrr/watchtower.svg)](https://hub.docker.com/r/containrrr/watchtower)
 
 </div>
+
+## Compatibility
+
+**Docker Engine Support**: This enhanced version automatically detects and adapts to your Docker Engine version, supporting both legacy and modern installations.
+
+- **Auto-negotiation**: Automatically detects the best API version for your Docker Engine
+- **Version Range**: Compatible with Docker Engine 20.10+ through 29.x and beyond
+- **Backward Compatibility**: Supports older Docker installations with limited feature sets
+- **No Manual Configuration**: No need to specify `--api-version` in most cases
+
+**Supported Docker Versions**:
+- ✅ Docker Engine 29.x (full support)
+- ✅ Docker Engine 24-28.x (full support) 
+- ✅ Docker Engine 20.10-23.x (basic support)
+- ⚠️ Docker Engine < 20.10 (limited support)
 
 ## Quick Start
 

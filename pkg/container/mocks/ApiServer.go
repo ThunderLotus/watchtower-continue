@@ -18,6 +18,13 @@ import (
 	"github.com/onsi/gomega/ghttp"
 )
 
+// ImageDeleteResponseItem represents an item in the response from ImageRemove
+// This type is defined locally to maintain compatibility with test code
+type ImageDeleteResponseItem struct {
+	Untagged string `json:"Untagged,omitempty"`
+	Deleted  string `json:"Deleted,omitempty"`
+}
+
 func getMockJSONFile(relPath string) ([]byte, error) {
 	absPath, _ := filepath.Abs(relPath)
 	buf, err := os.ReadFile(absPath)
@@ -262,12 +269,12 @@ func RemoveImageHandler(imagesWithParents map[string][]string) http.HandlerFunc 
 			image := parts[len(parts)-1]
 
 			if parents, found := imagesWithParents[image]; found {
-				items := []types.ImageDeleteResponseItem{
+				items := []ImageDeleteResponseItem{
 					{Untagged: image},
 					{Deleted: image},
 				}
 				for _, parent := range parents {
-					items = append(items, types.ImageDeleteResponseItem{Deleted: parent})
+					items = append(items, ImageDeleteResponseItem{Deleted: parent})
 				}
 				ghttp.RespondWithJSONEncoded(http.StatusOK, items)(w, r)
 			} else {

@@ -7,37 +7,68 @@ services:
       context: ./
       dockerfile: dockerfiles/Dockerfile.dev-self-contained
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    ports:
-      - 8080:8080
-    command: --interval 10 --http-api-metrics --http-api-token demotoken --debug prometheus grafana parent child
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus
-    volumes:
-      - ./prometheus/:/etc/prometheus/
-      - prometheus:/prometheus/
-    ports:
-      - 9090:9090
-  grafana:
-    container_name: grafana
-    image: grafana/grafana
-    ports:
-      - 3000:3000
+      # Mount Docker socket (required for container operations)
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Security enhancements
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # Network isolation
+    networks:
+      - watchtower-net
+    # Health check
+    healthcheck:
+      test: ["CMD", "/watchtower", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Security environment variables
     environment:
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
-    volumes:
-      - grafana:/var/lib/grafana
-      - ./grafana:/etc/grafana/provisioning
+      - DOCKER_API_VERSION=1.44
+      - WATCHTOWER_LOG_LEVEL=info
+      # Restrict watchtower to specific containers
+      - WATCHTOWER_SCOPE=watchtower-scope
+    # Add labels to this container so it doesn't monitor itself
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    command: --interval 10 --debug parent child
+
   parent:
     image: nginx
     container_name: parent
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "watchtower-scope"
+
   child:
     image: nginx:alpine
     labels:
       com.centurylinklabs.watchtower.depends-on: parent
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "watchtower-scope"
     container_name: child
 
-volumes:
-  prometheus: {}
-  grafana: {}
+networks:
+  watchtower-net:
+    driver: bridge

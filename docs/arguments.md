@@ -33,25 +33,20 @@ Some arguments can also reference a file, in which case the contents of the file
 This can be used to avoid putting secrets in the configuration file or command line.
 
 The following arguments are currently supported (including their corresponding `WATCHTOWER_` environment variables):
- - `notification-url`
  - `notification-email-server-password`
- - `notification-slack-hook-url`
- - `notification-msteams-hook`
- - `notification-gotify-token`
- - `http-api-token`
 
 ### Example docker-compose usage
 ```yaml
 secrets:
-  access_token:
-    file: access_token
+  email_password:
+    file: email_password
 
 services:
   watchtower:
     secrets:
-      - access_token
+      - email_password
     environment:
-      - WATCHTOWER_HTTP_API_TOKEN=/run/secrets/access_token
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=/run/secrets/email_password
 ```
 
 ## Help
@@ -323,38 +318,6 @@ Environment Variable: WATCHTOWER_RUN_ONCE
              Default: false
 ```
 
-## HTTP API Mode
-Runs Watchtower in HTTP API mode, only allowing image updates to be triggered by an HTTP request. 
-For details see [HTTP API](https://containrrr.dev/watchtower/http-api-mode).
-
-```text
-            Argument: --http-api-update
-Environment Variable: WATCHTOWER_HTTP_API_UPDATE
-                Type: Boolean
-             Default: false
-```
-
-## HTTP API Token
-Sets an authentication token to HTTP API requests.
-Can also reference a file, in which case the contents of the file are used.
-
-```text
-            Argument: --http-api-token
-Environment Variable: WATCHTOWER_HTTP_API_TOKEN
-                Type: String
-             Default: -
-```
-
-## HTTP API periodic polls
-Keep running periodic updates if the HTTP API mode is enabled, otherwise the HTTP API would prevent periodic polls.  
-
-```text
-            Argument: --http-api-periodic-polls
-Environment Variable: WATCHTOWER_HTTP_API_PERIODIC_POLLS
-                Type: Boolean
-             Default: false
-```
-
 ## Filter by scope
 Update containers that have a `com.centurylinklabs.watchtower.scope` label set with the same value as the given argument. 
 This enables [running multiple instances](https://containrrr.dev/watchtower/running-multiple-instances).
@@ -370,16 +333,6 @@ Environment Variable: WATCHTOWER_SCOPE
                 Type: String
              Default: -
 ``` 
-
-## HTTP API Metrics
-Enables a metrics endpoint, exposing prometheus metrics via HTTP. See [Metrics](metrics.md) for details.  
-
-```text
-            Argument: --http-api-metrics
-Environment Variable: WATCHTOWER_HTTP_API_METRICS
-                Type: Boolean
-             Default: false
-```
 
 ## Scheduling
 [Cron expression](https://pkg.go.dev/github.com/robfig/cron@v1.2.0?tab=doc#hdr-CRON_Expression_Format) in 6 fields (rather than the traditional 5) which defines when and how often to check for new images. Either `--interval` or the schedule expression
@@ -450,18 +403,59 @@ Returns a success exit code to enable usage with docker `HEALTHCHECK`. This chec
 
 ## Programatic Output (porcelain)
 
-Writes the session results to STDOUT using a stable, machine-readable format (indicated by the argument VERSION).  
-  
-Alias for:
+Writes the session results to STDOUT using a stable, machine-readable format (indicated by the argument VERSION).
 
 ```text
-		--notification-url logger://
-		--notification-log-stdout
-		--notification-report
-		--notification-template porcelain.VERSION.summary-no-log
-
             Argument: --porcelain, -P
 Environment Variable: WATCHTOWER_PORCELAIN
      Possible values: v1
              Default: -
+```
+
+Note: Porcelain mode requires Email notification to be configured for sending reports.
+
+## Retry Enable
+
+## Retry Enable
+
+Enables retry mechanism for network operations. When enabled, watchtower will automatically retry failed network operations (such as pulling images or communicating with the Docker daemon) based on the retry configuration.
+
+```text
+            Argument: --retry-enable
+Environment Variable: WATCHTOWER_RETRY_ENABLE
+                Type: Boolean
+             Default: true
+```
+
+## Retry Max Attempts
+
+Sets the maximum number of retry attempts for network operations. This parameter controls how many times watchtower will retry a failed operation before giving up.
+
+```text
+            Argument: --retry-max-attempts
+Environment Variable: WATCHTOWER_RETRY_MAX_ATTEMPTS
+                Type: Integer
+             Default: 5
+```
+
+## Retry Initial Delay
+
+Sets the initial delay before the first retry. This parameter controls the amount of time to wait before retrying a failed operation for the first time. Subsequent delays will increase exponentially based on the retry configuration.
+
+```text
+            Argument: --retry-initial-delay
+Environment Variable: WATCHTOWER_RETRY_INITIAL_DELAY
+                Type: Duration
+             Default: 1s
+```
+
+## Retry Max Delay
+
+Sets the maximum delay between retry attempts. This parameter caps the exponential backoff delay to prevent excessively long wait times between retries.
+
+```text
+            Argument: --retry-max-delay
+Environment Variable: WATCHTOWER_RETRY_MAX_DELAY
+                Type: Duration
+             Default: 30s
 ```

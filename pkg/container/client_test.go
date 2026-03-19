@@ -1,7 +1,8 @@
 package container
 
 import (
-	"github.com/docker/docker/api/types/network"
+	"context"
+	"net/http"
 	"time"
 
 	"github.com/containrrr/watchtower/internal/util"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/backend"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	cli "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/onsi/gomega/gbytes"
@@ -20,9 +23,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gt "github.com/onsi/gomega/types"
-
-	"context"
-	"net/http"
 )
 
 var _ = Describe("the client", func() {
@@ -270,7 +270,7 @@ var _ = Describe("the client", func() {
 					// API.ContainerExecCreate
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("POST", HaveSuffix("containers/%v/exec", containerID)),
-						ghttp.VerifyJSONRepresenting(types.ExecConfig{
+						ghttp.VerifyJSONRepresenting(container.ExecOptions{
 							User:   user,
 							Detach: false,
 							Tty:    true,
@@ -285,7 +285,7 @@ var _ = Describe("the client", func() {
 					// API.ContainerExecStart
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("POST", HaveSuffix("exec/%v/start", execID)),
-						ghttp.VerifyJSONRepresenting(types.ExecStartCheck{
+						ghttp.VerifyJSONRepresenting(container.ExecStartOptions{
 							Detach: false,
 							Tty:    true,
 						}),
