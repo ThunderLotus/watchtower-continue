@@ -49,16 +49,11 @@ type Client interface {
 //   - DOCKER_TLS_VERIFY		whether to verify tls certificates
 //   - DOCKER_API_VERSION	the minimum docker api version to work with
 func NewClient(opts ClientOptions) (Client, error) {
-	// Try to create client with auto-negotiated API version
-	// This will automatically adapt to the Docker daemon's API version
+	// Create client with API version negotiation for maximum compatibility
+	// This allows watchtower to work with both old and new Docker daemon versions
 	cli, err := sdkClient.NewClientWithOpts(sdkClient.FromEnv, sdkClient.WithAPIVersionNegotiation())
 	if err != nil {
-		// If auto-negotiation fails, try with default version
-		log.Warnf("Auto-negotiation of API version failed: %v. Using default version.", err)
-		cli, err = sdkClient.NewClientWithOpts(sdkClient.FromEnv)
-		if err != nil {
-			return nil, fmt.Errorf("error instantiating Docker client: %w", err)
-		}
+		return nil, fmt.Errorf("error instantiating Docker client: %w", err)
 	}
 
 	// Get server API version

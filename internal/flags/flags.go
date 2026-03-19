@@ -349,7 +349,8 @@ func envDuration(key string) time.Duration {
 func SetDefaults() {
 	viper.AutomaticEnv()
 	viper.SetDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
-	viper.SetDefault("DOCKER_API_VERSION", DockerAPIMinVersion)
+	// Removed default DOCKER_API_VERSION to allow auto-negotiation
+	// This ensures compatibility with both old and new Docker daemon versions
 	viper.SetDefault("WATCHTOWER_POLL_INTERVAL", defaultInterval)
 	viper.SetDefault("WATCHTOWER_TIMEOUT", time.Second*10)
 	viper.SetDefault("WATCHTOWER_NOTIFICATIONS", []string{})
