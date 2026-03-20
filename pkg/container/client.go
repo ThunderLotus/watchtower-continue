@@ -37,7 +37,7 @@ type Client interface {
 	StartContainer(t.Container) (t.ContainerID, error)
 	RenameContainer(t.Container, string) error
 	IsContainerStale(t.Container, t.UpdateParams) (stale bool, latestImage t.ImageID, err error)
-	ExecuteCommand(containerID t.ContainerID, command string, timeout int) (SkipUpdate bool, err error)
+	ExecuteCommand(containerID t.ContainerID, command string, timeout time.Duration) error
 	RemoveImageByID(t.ImageID) error
 	WarnOnHeadPullFailed(container t.Container) bool
 }
@@ -500,6 +500,16 @@ func (client dockerClient) PullImage(ctx context.Context, container t.Container)
 		return err
 	}
 
+defer func() {
+		_ = response.Close()
+	}()
+
+	// the pull request will be aborted prematurely unless the response is read
+	if _, err = io.ReadAll(response); err != nil {
+		log.Error(err)
+		return err
+	}
+	
 	log.Infof("Successfully pulled image %s for container %s", imageName, containerName)
 	return nil
 }
@@ -541,9 +551,8 @@ func (client dockerClient) RemoveImageByID(id t.ImageID) error {
 	return err
 }
 
-func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command string, timeout int) (SkipUpdate bool, err error) {
-	bg, cancel := context.WithTimeout(context.Background(), defaultCommandTimeout)
-	defer cancel()
+func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command string, timeout time.Duration) error {
+	bg := context.Background()
 	clog := log.WithField("containerID", containerID)
 
 	// Create the exec
@@ -555,7 +564,7 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 
 	exec, err := client.api.ContainerExecCreate(bg, string(containerID), execConfig)
 	if err != nil {
-		return false, fmt.Errorf("failed to create exec for container %s: %w", containerID, err)
+		return fmt.Errorf("failed to create exec for container %s: %w", containerID, err)
 	}
 
 	response, attachErr := client.api.ContainerExecAttach(bg, exec.ID, container.ExecStartOptions{
@@ -569,7 +578,7 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 	// Run the exec
 	execStartOptions := container.ExecStartOptions{Detach: false, Tty: true}
 	if err := client.api.ContainerExecStart(bg, exec.ID, execStartOptions); err != nil {
-		return false, fmt.Errorf("failed to start exec for container %s: %w", containerID, err)
+		return fmt.Errorf("failed to start exec for container %s: %w", containerID, err)
 	}
 
 	var output string
@@ -586,24 +595,16 @@ func (client dockerClient) ExecuteCommand(containerID t.ContainerID, command str
 
 	// Inspect the exec to get the exit code and print a message if the
 	// exit code is not success.
-	skipUpdate, err := client.waitForExecOrTimeout(bg, exec.ID, output, timeout)
-	if err != nil {
-		return true, err
-	}
-
-	return skipUpdate, nil
+	return client.waitForExecOrTimeout(bg, exec.ID, output, timeout)
 }
 
-func (client dockerClient) waitForExecOrTimeout(bg context.Context, ID string, execOutput string, timeout int) (SkipUpdate bool, err error) {
+func (client dockerClient) waitForExecOrTimeout(ctx context.Context, ID string, execOutput string, timeout time.Duration) error {
 	const ExTempFail = 75
-	var ctx context.Context
-	var cancel context.CancelFunc
 
 	if timeout > 0 {
-		ctx, cancel = context.WithTimeout(bg, time.Duration(timeout)*time.Minute)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
-	} else {
-		ctx = bg
 	}
 
 	for {
@@ -618,7 +619,7 @@ func (client dockerClient) waitForExecOrTimeout(bg context.Context, ID string, e
 		}).Debug("Awaiting timeout or completion")
 
 		if err != nil {
-			return false, err
+			return err
 		}
 		if execInspect.Running {
 			time.Sleep(1 * time.Second)
@@ -629,15 +630,15 @@ func (client dockerClient) waitForExecOrTimeout(bg context.Context, ID string, e
 		}
 
 		if execInspect.ExitCode == ExTempFail {
-			return true, nil
+			return ErrorLifecycleSkip
 		}
 
 		if execInspect.ExitCode > 0 {
-			return false, fmt.Errorf("command exited with code %v  %s", execInspect.ExitCode, execOutput)
+			return fmt.Errorf("command exited with code %v", execInspect.ExitCode)
 		}
 		break
 	}
-	return false, nil
+	return nil
 }
 
 func (client dockerClient) waitForStopOrTimeout(c t.Container, waitTime time.Duration) error {

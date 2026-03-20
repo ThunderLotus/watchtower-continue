@@ -39,7 +39,7 @@ type Container struct {
 	Stale              atomic.Bool
 }
 
-// IsLinkedToRestarting returns the current value of the LinkedToRestarting field for the container
+// IsLinkedToRestarting returns the current value of the linkedToRestarting field for the container
 func (c *Container) IsLinkedToRestarting() bool {
 	return c.LinkedToRestarting.Load()
 }
@@ -49,7 +49,7 @@ func (c *Container) IsStale() bool {
 	return c.Stale.Load()
 }
 
-// SetLinkedToRestarting sets the LinkedToRestarting field for the container
+// SetLinkedToRestarting sets the linkedToRestarting field for the container
 func (c *Container) SetLinkedToRestarting(value bool) {
 	c.LinkedToRestarting.Store(value)
 }
@@ -218,44 +218,6 @@ func (c *Container) ToRestart() bool {
 // the container metadata.
 func (c *Container) IsWatchtower() bool {
 	return ContainsWatchtowerLabel(c.containerInfo.Config.Labels)
-}
-
-// PreUpdateTimeout checks whether a container has a specific timeout set
-// for how long the pre-update command is allowed to run. This value is expressed
-// either as an integer, in minutes, or as 0 which will allow the command/script
-// to run indefinitely. Users should be cautious with the 0 option, as that
-// could result in watchtower waiting forever.
-func (c *Container) PreUpdateTimeout() int {
-	var minutes int
-	var err error
-
-	val := c.getLabelValueOrEmpty(preUpdateTimeoutLabel)
-
-	minutes, err = strconv.Atoi(val)
-	if err != nil || val == "" {
-		return 1
-	}
-
-	return minutes
-}
-
-// PostUpdateTimeout checks whether a container has a specific timeout set
-// for how long the post-update command is allowed to run. This value is expressed
-// either as an integer, in minutes, or as 0 which will allow the command/script
-// to run indefinitely. Users should be cautious with the 0 option, as that
-// could result in watchtower waiting forever.
-func (c *Container) PostUpdateTimeout() int {
-	var minutes int
-	var err error
-
-	val := c.getLabelValueOrEmpty(postUpdateTimeoutLabel)
-
-	minutes, err = strconv.Atoi(val)
-	if err != nil || val == "" {
-		return 1
-	}
-
-	return minutes
 }
 
 // StopSignal returns the custom stop signal (if any) that is encoded in the
