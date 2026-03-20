@@ -77,10 +77,10 @@ Huge respect to the original creator. Thank you for such a great tool that has k
 - **No Manual Configuration**: No need to specify `--api-version` in most cases
 
 **Supported Docker Versions**:
-- 鉁?Docker Engine 29.x (full support)
-- 鉁?Docker Engine 24-28.x (full support)
-- 鉁?Docker Engine 20.10-23.x (basic support)
-- 鈿狅笍 Docker Engine < 20.10 (limited support)
+- ✅ Docker Engine 29.x (full support)
+- ✅ Docker Engine 24-28.x (full support)
+- ✅ Docker Engine 20.10-23.x (basic support)
+- ⚠️ Docker Engine < 20.10 (limited support)
 
 ## Quick Start
 
