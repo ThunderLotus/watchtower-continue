@@ -21,7 +21,7 @@ Huge respect to the original creator. Thank you for such a great tool that has k
 
 **Fork Repository**: [ThunderLotus/watchtower-continue](https://github.com/ThunderLotus/watchtower-continue)
 
-Now you can get it from docker hub by: thunderlotus/watchtower-continue:v1.8.0
+**Docker Hub**: `thunderlotus/watchtower-continue:v1.8.0`
 
 ---
 <div align="center">
