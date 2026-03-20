@@ -14,9 +14,13 @@ But we're now in the era of AI Vibe Coding. Even though I’m not a Go expert, w
 I’m sharing this here so fellow fans of this software can save some time and tokens. It’s also a good way for me to get some hands-on practice. Of course, if this isn't your cup of tea, you’re welcome to build your own version.
 
 Huge respect to the original creator. Thank you for such a great tool that has kept me company for so long
+
 **Original Project**: [containrrr/watchtower](https://github.com/containrrr/watchtower)  
+
 **License**: Apache License 2.0    
+
 **Fork Repository**: [ThunderLotus/watchtower-continue](https://github.com/ThunderLotus/watchtower-continue)
+
 Now you can get it from docker hub by: thunderlotus/watchtower-continue:v1.8.0
 ---
 <div align="center">
