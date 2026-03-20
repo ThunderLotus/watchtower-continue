@@ -34,9 +34,21 @@ type Container struct {
 
 	// Use atomic.Bool for thread-safe boolean fields
 	// Add padding between them to avoid false positives from race detector
+	
+	// Stale indicates that the container's image is outdated (has a newer version available)
+	// This is set when comparing image digests with the registry
+	Stale atomic.Bool
+	_    [4]byte // padding
+	
+	// MarkedForUpdate indicates that the container has been marked for update
+	// This is set by the update session when a container is selected for update
+	MarkedForUpdate atomic.Bool
+	_                [4]byte // padding
+	
+	// LinkedToRestarting indicates that this container is linked to a container that is restarting
+	// This is set when a container depends on another container that is being updated
 	LinkedToRestarting atomic.Bool
 	_                 [4]byte // padding
-	Stale              atomic.Bool
 }
 
 // IsLinkedToRestarting returns the current value of the linkedToRestarting field for the container
@@ -44,19 +56,37 @@ func (c *Container) IsLinkedToRestarting() bool {
 	return c.LinkedToRestarting.Load()
 }
 
-// IsStale returns the current value of the Stale field for the container
+// IsStale returns whether the container's image is outdated (has a newer version available).
+// This is determined by comparing the container's image digest with the registry.
+// This method is thread-safe.
 func (c *Container) IsStale() bool {
 	return c.Stale.Load()
+}
+
+// SetStale sets whether the container's image is outdated.
+// This is typically set after comparing image digests with the registry.
+// This method is thread-safe.
+func (c *Container) SetStale(value bool) {
+	c.Stale.Store(value)
+}
+
+// IsMarkedForUpdate returns whether the container is marked for update.
+// This indicates that the container has been selected for update by the update session.
+// This method is thread-safe.
+func (c *Container) IsMarkedForUpdate() bool {
+	return c.MarkedForUpdate.Load()
+}
+
+// SetMarkedForUpdate marks or unmarks the container for update.
+// Setting to true indicates the container is selected for update; setting to false
+// indicates the container should not be updated. This method is thread-safe.
+func (c *Container) SetMarkedForUpdate(value bool) {
+	c.MarkedForUpdate.Store(value)
 }
 
 // SetLinkedToRestarting sets the linkedToRestarting field for the container
 func (c *Container) SetLinkedToRestarting(value bool) {
 	c.LinkedToRestarting.Store(value)
-}
-
-// SetStale implements sets the Stale field for the container
-func (c *Container) SetStale(value bool) {
-	c.Stale.Store(value)
 }
 
 // ContainerInfo fetches JSON info for the container
@@ -207,9 +237,9 @@ func (c *Container) Links() []string {
 }
 
 // ToRestart return whether the container should be restarted, either because
-// is stale or linked to another stale container.
+// it's marked for update or linked to a container that is restarting.
 func (c *Container) ToRestart() bool {
-	return c.Stale.Load() || c.LinkedToRestarting.Load()
+	return c.MarkedForUpdate.Load() || c.LinkedToRestarting.Load()
 }
 
 // IsWatchtower returns a boolean flag indicating whether or not the current

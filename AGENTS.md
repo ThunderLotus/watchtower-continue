@@ -4,7 +4,12 @@
 
 Watchtower 是一个用于自动化 Docker 容器基础镜像更新的进程。它能够监控 Docker 容器，当检测到新的镜像发布时，自动拉取新镜像、优雅地关闭现有容器，并使用与初始部署时相同的选项重启容器。
 
-**⚠️ 重要提示**: 该项目已不再维护，详细信息请参见 https://github.com/containrrr/watchtower/discussions/2135
+**🔄 Fork 信息**: 本项目是 [containrrr/watchtower](https://github.com/containrrr/watchtower) 的社区 fork，由 [ThunderLotus](https://github.com/ThunderLotus) 维护。
+
+**原始项目**: [containrrr/watchtower](https://github.com/containrrr/watchtower)  
+**许可证**: Apache License 2.0  
+**Fork 目的**: 继续维护和更新  
+**Fork 仓库**: [ThunderLotus/watchtower-continue](https://github.com/ThunderLotus/watchtower-continue)
 
 ### 主要技术栈
 

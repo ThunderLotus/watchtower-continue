@@ -1,0 +1,9 @@
+﻿Watchtower
+Copyright 2015 Watchtower contributors
+
+This project includes code from the Go Authors:
+- Copyright (c) 2009 The Go Authors. All rights reserved.
+  For details see https://golang.org/LICENSE
+
+This project is currently maintained by ThunderLotus as a fork.
+For information about the fork, see: https://github.com/ThunderLotus/watchtower-continue

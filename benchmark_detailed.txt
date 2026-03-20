@@ -1,1 +1,0 @@
-﻿ok  	github.com/containrrr/watchtower/pkg/retry	0.321s

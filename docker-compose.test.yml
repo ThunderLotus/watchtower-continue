@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 测试容器 1: 基础 nginx 容器
+  test-nginx:
+    image: nginx:1.25-alpine
+    container_name: test-nginx
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "test"
+    ports:
+      - "8081:80"
+
+  # 测试容器 2: 带依赖关系的 redis 容器
+  test-redis:
+    image: redis:7-alpine
+    container_name: test-redis
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "test"
+      com.centurylinklabs.watchtower.depends-on: "test-nginx"
+    ports:
+      - "6379:6379"
+
+  # 测试容器 3: 带 pre-check 生命周期的容器
+  test-app:
+    image: alpine:3.18
+    container_name: test-app
+    command: ["sh", "-c", "tail -f /dev/null"]
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "test"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: "echo 'Pre-check running'"
+      com.centurylinklabs.watchtower.lifecycle.pre-check-timeout: "30s"
+    ports:
+      - "8082:80"
+
+  # 测试容器 4: 不启用 watchtower 的容器
+  test-disabled:
+    image: busybox:1.36
+    container_name: test-disabled
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    command: ["sh", "-c", "tail -f /dev/null"]
+
+  # 测试容器 5: 带 monitor-only 标签的容器
+  test-monitor-only:
+    image: httpd:2.4-alpine
+    container_name: test-monitor-only
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "test"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    ports:
+      - "8083:80"
+
+  # 本地构建的 watchtower 用于测试
+  watchtower-test:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.dev-self-contained
+      args:
+        WATCHTOWER_VERSION: v1.8.0
+    container_name: watchtower-test
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_SCOPE=test
+      - WATCHTOWER_RUN_ONCE=true
+      - WATCHTOWER_DEBUG=true
+      - WATCHTOWER_LOG_LEVEL=debug
+    depends_on:
+      - test-nginx
+      - test-redis
+      - test-app

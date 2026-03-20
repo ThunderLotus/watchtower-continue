@@ -14,8 +14,8 @@ You can check your current version of the go language as follows:
 ## Checking out the code
 Do not place your code in the go source path.
 ```bash
-git clone git@github.com:<yourfork>/watchtower.git
-cd watchtower
+git clone https://github.com/ThunderLotus/watchtower-continue.git
+cd watchtower-continue
 ```
 
 ## Building and testing
