@@ -1,5 +1,7 @@
 watchtower
 watchtower.exe
+watchtower-test.exe
+*.tar
 vendor
 .glide
 dist
@@ -11,3 +13,4 @@ coverage.out
 
 docs/assets/wasm_exec.js
 docs/assets/*.wasm
+AGENTS.md
