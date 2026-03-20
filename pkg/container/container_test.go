@@ -261,6 +261,49 @@ var _ = Describe("the container", func() {
 			})
 		})
 
+		When("fetching the image name with sha256 hash", func() {
+			When("imageInfo is nil", func() {
+				It("should return the original sha256 hash as fallback", func() {
+					hash := "sha256:fa5269854a5e615e51a72b17ad3fd1e01268f278a6684c8ed3c5f0cdce3f230b"
+					c = MockContainer(WithImageName(hash))
+					c.imageInfo = nil
+					imageName := c.ImageName()
+					Expect(imageName).To(Equal(hash))
+					Expect(imageName).NotTo(BeEmpty())
+				})
+			})
+			When("RepoTags is empty", func() {
+				It("should return the original sha256 hash as fallback", func() {
+					hash := "sha256:fa5269854a5e615e51a72b17ad3fd1e01268f278a6684c8ed3c5f0cdce3f230b"
+					c = MockContainer(WithImageName(hash))
+					c.imageInfo.RepoTags = []string{}
+					imageName := c.ImageName()
+					Expect(imageName).To(Equal(hash))
+					Expect(imageName).NotTo(BeEmpty())
+				})
+			})
+			When("RepoTags has multiple tags", func() {
+				It("should return the first tag as fallback", func() {
+					hash := "sha256:fa5269854a5e615e51a72b17ad3fd1e01268f278a6684c8ed3c5f0cdce3f230b"
+					c = MockContainer(WithImageName(hash))
+					c.imageInfo.RepoTags = []string{"myimage:v1", "myimage:latest", "myimage:stable"}
+					imageName := c.ImageName()
+					Expect(imageName).To(Equal("myimage:v1"))
+					Expect(imageName).NotTo(BeEmpty())
+				})
+			})
+			When("RepoTags has single tag", func() {
+				It("should return that tag", func() {
+					hash := "sha256:fa5269854a5e615e51a72b17ad3fd1e01268f278a6684c8ed3c5f0cdce3f230b"
+					c = MockContainer(WithImageName(hash))
+					c.imageInfo.RepoTags = []string{"myimage:v1"}
+					imageName := c.ImageName()
+					Expect(imageName).To(Equal("myimage:v1"))
+					Expect(imageName).NotTo(BeEmpty())
+				})
+			})
+		})
+
 		When("fetching container links", func() {
 			When("the depends on label is present", func() {
 				It("should fetch depending containers from it", func() {

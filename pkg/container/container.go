@@ -137,6 +137,17 @@ func (c *Container) SafeImageID() wt.ImageID {
 // ImageName returns the name of the Docker image that was used to start the
 // container. If the original image was specified without a particular tag, the
 // "latest" tag is assumed.
+//
+// When the container uses a sha256 hash as the image reference, this method
+// attempts to resolve it to a human-readable tag from the image info:
+//   - If the image has a single repo tag, that tag is returned
+//   - If the image has multiple tags, the first tag is returned with a warning
+//   - If no tags are available (imageInfo is nil or RepoTags is empty), the
+//     original sha256 hash is returned as a fallback to ensure the method
+//     never returns an empty string
+//
+// This method guarantees to always return a non-empty string to avoid
+// nil pointer dereference or logic errors in calling code.
 func (c *Container) ImageName() string {
 	imageName := c.containerInfo.Config.Image
 
@@ -147,14 +158,32 @@ func (c *Container) ImageName() string {
 		}
 
 		if len(tags) == 1 {
-			// image has a single repo tag
+			// image has a single repo tag - use it
 			return tags[0]
-		} else if len(tags) < 1 {
-			log.Warn("hash container image with no image info")
-			return ""
+		} else if len(tags) > 1 {
+			// image has multiple tags - use the first one with a warning
+			log.WithFields(log.Fields{
+				"container": c.Name(),
+				"container_id": c.ID(),
+				"tags": tags,
+			}).Warn("Container using sha256 hash has multiple tags, selecting the first one")
+			return tags[0]
 		} else {
-			log.WithField("tags", tags).Warn("hash container image with multiple tags in image info")
-			return ""
+			// No tags available - return the original sha256 hash as fallback
+			if c.imageInfo == nil {
+				log.WithFields(log.Fields{
+					"container": c.Name(),
+					"container_id": c.ID(),
+					"image": imageName,
+				}).Warn("Container using sha256 hash has no image info, using hash as fallback")
+			} else {
+				log.WithFields(log.Fields{
+					"container": c.Name(),
+					"container_id": c.ID(),
+					"image": imageName,
+				}).Warn("Container using sha256 hash has no repo tags, using hash as fallback")
+			}
+			return imageName
 		}
 	}
 
