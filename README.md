@@ -39,6 +39,23 @@ maintained by [ThunderLotus](https://github.com/ThunderLotus).
 
 </div>
 
+## Version Information
+
+**Current Version**: v1.8.0
+
+### What's New in v1.8.0
+
+- **Docker SDK Upgrade**: Upgraded to Docker SDK v28.5.2 for full Docker Engine 29.x support
+- **State Management Redesign**: Improved container state management with three independent atomic fields
+- **Image Name Handling**: Enhanced hash-based image name handling with fallback strategies
+- **Test Coverage**: Improved test infrastructure with 70+ real integration tests
+- **Code Quality**: Refactored and optimized codebase with better thread safety
+
+### Version History
+
+- **v1.8.0** (2026-03) - Docker Engine 29.x support, state management redesign
+- **v1.7.1** - Original watchtower release
+
 ## Compatibility
 
 **Docker Engine Support**: This enhanced version automatically detects and adapts to your Docker Engine version, supporting both legacy and modern installations.
@@ -50,7 +67,7 @@ maintained by [ThunderLotus](https://github.com/ThunderLotus).
 
 **Supported Docker Versions**:
 - 鉁?Docker Engine 29.x (full support)
-- 鉁?Docker Engine 24-28.x (full support) 
+- 鉁?Docker Engine 24-28.x (full support)
 - 鉁?Docker Engine 20.10-23.x (basic support)
 - 鈿狅笍 Docker Engine < 20.10 (limited support)
 
@@ -71,6 +88,78 @@ Watchtower is intended to be used in homelabs, media centers, local dev environm
 
 ## Documentation
 The full documentation is available at https://containrrr.dev/watchtower.
+
+## Project Status
+
+### ⚠️ Original Project Status
+The original [containrrr/watchtower](https://github.com/containrrr/watchtower) project is no longer actively maintained. See the discussion for more details: https://github.com/containrrr/watchtower/discussions/2135
+
+### ✅ This Fork Status
+This fork is actively maintained and updated:
+
+- **Active Development**: Regular updates and bug fixes
+- **Docker Engine Support**: Supports latest Docker Engine versions (20.10 through 29.x+)
+- **Test Quality**: 70+ real integration tests with actual Docker API interactions
+- **Code Quality**: High code standards with automated review and testing
+- **Community Driven**: Open to contributions and feedback
+
+**Note**: Watchtower is intended to be used in homelabs, media centers, local dev environments, and similar. We do **not** recommend using Watchtower in a commercial or production environment. If that is you, you should be looking into using Kubernetes. If that feels like too big a step for you, please look into solutions like [MicroK8s](https://microk8s.io/) and [k3s](https://k3s.io/) that take away a lot of the toil of running a Kubernetes cluster.
+
+## Development Guide
+
+### Building from Source
+
+**Prerequisites**:
+- Go 1.20 or higher
+- Docker (for testing)
+
+**Build Commands**:
+```bash
+# Build the binary
+go build -o watchtower
+
+# Run tests
+go test ./... -v
+
+# Run tests with coverage
+go test ./... -v -coverprofile=coverage.out
+go tool cover -html=coverage.out -o coverage.html
+```
+
+**Using Test Runners**:
+
+Windows (PowerShell):
+```powershell
+.\scripts\run-tests.ps1
+```
+
+Linux/Mac (Bash):
+```bash
+./scripts/run-tests.sh
+```
+
+### Building Docker Images
+
+**Local Build**:
+```bash
+docker build . -f dockerfiles/Dockerfile.dev-self-contained -t watchtower:local
+```
+
+**Custom Version**:
+```bash
+docker build \
+  --build-arg WATCHTOWER_VERSION=v1.8.0 \
+  -f dockerfiles/Dockerfile.dev-self-contained \
+  -t watchtower:v1.8.0 \
+  .
+```
+
+### Code Quality
+
+- **Test Coverage**: 70+ real integration tests in pkg/container package
+- **Code Review**: Automated code review with comprehensive feedback
+- **CI/CD**: Automated testing and quality checks
+- **Thread Safety**: Verified with race detector testing
 
 ## Contributors
 
