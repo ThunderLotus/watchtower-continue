@@ -35,7 +35,7 @@ Huge respect to the original creator. Thank you for such a great tool that has k
 
   # Watchtower
 
-  A process for automating Docker container base image updates.
+  A process for watching your Docker containers and automatically restarting them whenever their base image is refreshed.
   <br/><br/>
   
   [![Circle CI](https://circleci.com/gh/containrrr/watchtower.svg?style=shield)](https://circleci.com/gh/containrrr/watchtower)
