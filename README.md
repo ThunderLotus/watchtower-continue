@@ -7,11 +7,17 @@ title: Watchtower
 This is a community fork of [containrrr/watchtower](https://github.com/containrrr/watchtower)
 maintained by [ThunderLotus](https://github.com/ThunderLotus).
 
-**Original Project**: [containrrr/watchtower](https://github.com/containrrr/watchtower)  
-**License**: Apache License 2.0  
-**Fork Purpose**: Continue maintenance and updates  
-**Fork Repository**: [ThunderLotus/watchtower-continue](https://github.com/ThunderLotus/watchtower-continue)
+**Fork Purpose**: I’ve been using this nifty little tool for a while—it’s lightweight and does the job perfectly. However, I recently realized it’s no longer compatible with the latest Docker versions, and the original developer has stopped updating it.
 
+But we're now in the era of AI Vibe Coding. Even though I’m not a Go expert, with my background as a Software Project Manager, I figured I could get this sorted. After all, the AI is doing the heavy lifting; I’m just the orchestrator.
+
+I’m sharing this here so fellow fans of this software can save some time and tokens. It’s also a good way for me to get some hands-on practice. Of course, if this isn't your cup of tea, you’re welcome to build your own version.
+
+Huge respect to the original creator. Thank you for such a great tool that has kept me company for so long
+**Original Project**: [containrrr/watchtower](https://github.com/containrrr/watchtower)  
+**License**: Apache License 2.0    
+**Fork Repository**: [ThunderLotus/watchtower-continue](https://github.com/ThunderLotus/watchtower-continue)
+Now you can get it from docker hub by: thunderlotus/watchtower-continue:v1.8.0
 ---
 <div align="center">
 
