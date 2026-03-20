@@ -108,7 +108,7 @@ The original [containrrr/watchtower](https://github.com/containrrr/watchtower) p
 ### ✅ This Fork Status
 This fork is actively maintained and updated:
 
-- **Active Development**: Regular updates and bug fixes
+- **Active Development**: Bug fixes and maintenance when needed
 - **Docker Engine Support**: Supports latest Docker Engine versions (20.10 through 29.x+)
 - **Test Quality**: 70+ real integration tests with actual Docker API interactions
 - **Code Quality**: High code standards with automated review and testing
