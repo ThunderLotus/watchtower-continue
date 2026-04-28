@@ -1,4 +1,6 @@
 name: Dependency Security Scan
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
   push:
