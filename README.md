@@ -1,6 +1,33 @@
 ﻿---
 Watchtower-continue
 ---
+# Watchtower Continue
+
+A maintained continuation of
+[containrrr/watchtower](...).
+
+The original Watchtower project is no longer maintained.
+Watchtower Continue keeps Watchtower working with newer
+Docker Engine versions.
+
+## Watchtower stopped working after a Docker upgrade?
+
+If you see errors such as:
+
+    client version 1.25 is too old
+    Minimum supported API version is 1.44
+
+you may be using the original, unmaintained Watchtower.
+
+### Migration
+
+Replace:
+    containrrr/watchtower
+with:
+
+    yourname/watchtower-continue
+
+Your existing Watchtower configuration is designed to remain compatible.
 
 ## 🔄 Fork Information
 
