@@ -13,13 +13,14 @@ Watchtower 是一个用于自动化 Docker 容器基础镜像更新的进程。�
 
 ### 主要技术栈
 
-- **编程语言**: Go 1.20
+- **编程语言**: Go 1.25.8
 - **依赖管理**: Go Modules
 - **CLI 框架**: Cobra
 - **日志**: Logrus
 - **测试**: Ginkgo + Gomega
-- **监控**: Prometheus
+- **监控**: 简化内置指标（已移除 Prometheus 集成）
 - **通知**: 支持多种通知方式（Email、Slack、Gotify、Microsoft Teams 等）
+- **重试**: 内置指数退避重试机制（pkg/retry）
 
 ### 项目架构
 
@@ -35,27 +36,27 @@ watchtower/
 │   ├── meta/                 # 元数据（版本信息）
 │   └── util/                 # 工具函数
 ├── pkg/                       # 公共包
-│   ├── api/                  # HTTP API（更新、指标）
 │   ├── container/            # Docker 容器客户端
 │   ├── filters/              # 容器过滤器
 │   ├── lifecycle/            # 生命周期钩子
-│   ├── metrics/              # Prometheus 指标
+│   ├── metrics/              # 简化指标（无 Prometheus）
 │   ├── notifications/        # 通知系统
 │   ├── registry/             # 镜像仓库（认证、摘要、清单）
+│   ├── retry/                # 指数退避重试机制
 │   ├── session/              # 会话管理
 │   ├── sorter/               # 排序器
 │   └── types/                # 类型定义
 ├── dockerfiles/               # Dockerfile 配置
 ├── docs/                      # 项目文档
 ├── scripts/                   # 构建和测试脚本
-└── grafana/                   # Grafana 仪表板配置
+└── tplprev/                   # 模板预览工具（WASM + CLI）
 ```
 
 ## 构建和运行
 
 ### 前置要求
 
-- Go 1.20 或更高版本
+- Go 1.25 或更高版本
 - Docker（用于运行和测试）
 
 ### 本地构建
@@ -101,7 +102,7 @@ docker run --detach \
 
 ### 开发环境
 
-使用 docker-compose 启动完整的开发环境（包括 Prometheus 和 Grafana）：
+使用 docker-compose 启动开发环境：
 
 ```bash
 docker-compose up
@@ -109,8 +110,6 @@ docker-compose up
 
 这将启动：
 - Watchtower 容器
-- Prometheus（端口 9090）
-- Grafana（端口 3000）
 - 测试容器（parent 和 child）
 
 ## 主要功能
@@ -121,13 +120,7 @@ docker-compose up
 - 支持通过名称过滤容器
 - 支持监控范围（scope）隔离
 
-### 2. HTTP API
-- **更新 API**: 手动触发容器更新
-- **指标 API**: 获取 Prometheus 指标
-- 支持令牌认证
-- 端口：8080
-
-### 3. 通知系统
+### 2. 通知系统
 支持多种通知渠道：
 - Email
 - Slack
@@ -136,14 +129,19 @@ docker-compose up
 - Shoutrrr（支持多种通知服务）
 - 自定义通知
 
-### 4. 生命周期钩子
+### 3. 生命周期钩子
 - 预停止钩子（Pre-stop）
 - 后启动钩子（Post-start）
 - 支持通过环境变量配置
 
-### 5. 滚动重启
+### 4. 滚动重启
 - 支持依赖容器的滚动重启
 - 使用标签定义容器依赖关系
+
+### 5. 重试机制
+- 内置指数退避重试（pkg/retry）
+- 可配置最大重试次数、初始延迟、最大延迟
+- 自动识别可重试错误（网络超时、连接拒绝等）
 
 ## 开发规范
 
@@ -179,8 +177,8 @@ docker-compose up
 ### 配置文件
 - **go.mod**: Go 模块依赖定义
 - **docker-compose.yml**: 开发环境配置
-- **prometheus/prometheus.yml**: Prometheus 配置
-- **grafana/**: Grafana 仪表板和数据源配置
+- **.gitattributes**: Git 行尾符规范
+- **.editorconfig**: 编辑器配置
 
 ### 文档文件
 - **README.md**: 项目说明和快速开始指南
@@ -236,12 +234,12 @@ docker logs -f watchtower
 ## 依赖说明
 
 ### 主要依赖
-- `github.com/containrrr/shoutrrr`: 通知服务
 - `github.com/docker/docker`: Docker SDK
 - `github.com/spf13/cobra`: CLI 框架
 - `github.com/spf13/viper`: 配置管理
 - `github.com/robfig/cron`: 定时任务
-- `github.com/prometheus/client_golang`: Prometheus 指标
+- `github.com/sirupsen/logrus`: 日志
+- `github.com/cenkalti/backoff/v4`: 指数退避重试
 - `github.com/onsi/ginkgo`: 测试框架
 - `github.com/onsi/gomega`: 断言库
 
