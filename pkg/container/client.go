@@ -600,7 +600,10 @@ func (client dockerClient) waitForExecOrTimeout(ctx context.Context, ID string, 
 	for {
 		execInspect, err := client.api.ContainerExecInspect(ctx, ID)
 
-		//goland:noinspection GoNilness
+		if err != nil {
+			return err
+		}
+
 		log.WithFields(log.Fields{
 			"exit-code":    execInspect.ExitCode,
 			"exec-id":      execInspect.ExecID,
@@ -608,9 +611,6 @@ func (client dockerClient) waitForExecOrTimeout(ctx context.Context, ID string, 
 			"container-id": execInspect.ContainerID,
 		}).Debug("Awaiting timeout or completion")
 
-		if err != nil {
-			return err
-		}
 		if execInspect.Running {
 			time.Sleep(1 * time.Second)
 			continue
