@@ -67,7 +67,7 @@ func (us *updateSession) run() (err error) {
 
 		if err != nil {
 			log.Infof("Unable to update container %q: %v. Proceeding to next.", targetContainer.Name(), err)
-			us.progress.AddSkipped(targetContainer, err)
+			us.progress.AddFailed(targetContainer, err)
 			containers[i].SetMarkedForUpdate(false)
 		} else {
 			us.progress.AddScanned(targetContainer, newestImage)

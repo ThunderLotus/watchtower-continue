@@ -26,6 +26,18 @@ func (m Progress) AddSkipped(cont types.Container, err error) {
 	m.Add(update)
 }
 
+// AddFailed adds a container to the Progress with the state set as failed.
+// This is used when a container could not be scanned or updated due to an error
+// (e.g., image pull failure), so it is correctly counted in the Failed statistics.
+// AddFailed 将容器添加到 Progress 中，状态设为失败。
+// 当容器因错误（如镜像拉取失败）无法扫描或更新时使用，
+// 确保它被正确计入 Failed 统计。
+func (m Progress) AddFailed(cont types.Container, err error) {
+	update := UpdateFromContainer(cont, cont.SafeImageID(), FailedState)
+	update.error = err
+	m.Add(update)
+}
+
 // AddScanned adds a container to the Progress with the state set as scanned
 func (m Progress) AddScanned(cont types.Container, newImage types.ImageID) {
 	m.Add(UpdateFromContainer(cont, newImage, ScannedState))
