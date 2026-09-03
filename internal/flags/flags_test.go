@@ -142,6 +142,16 @@ func TestProcessFlagAliasesLogLevelFromEnvironment(t *testing.T) {
 func TestLogFormatFlag(t *testing.T) {
 	cmd := new(cobra.Command)
 
+	// Isolate from NO_COLOR env var which affects the no-color flag default
+	// 隔离 NO_COLOR 环境变量，它会影响 no-color 标志的默认值
+	oldVal, hadVal := os.LookupEnv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	t.Cleanup(func() {
+		if hadVal {
+			os.Setenv("NO_COLOR", oldVal)
+		}
+	})
+
 	SetDefaults()
 	RegisterDockerFlags(cmd)
 	RegisterSystemFlags(cmd)
