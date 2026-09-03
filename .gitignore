@@ -10,7 +10,14 @@ dist
 /site
 coverage.out
 *.coverprofile
+coverage/
 
 docs/assets/wasm_exec.js
 docs/assets/*.wasm
 AGENTS.md
+
+# CodeGraph index (local tooling)
+.codegraph/
+
+# CodeArts Doer (local tooling)
+.codeartsdoer/
