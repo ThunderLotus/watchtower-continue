@@ -78,6 +78,11 @@ func NewReport(progress Progress) types.Report {
 			continue
 		}
 
+		if update.state == FailedState {
+			report.failed = append(report.failed, update)
+			continue
+		}
+
 		report.scanned = append(report.scanned, update)
 		if update.newImage == update.oldImage {
 			update.state = FreshState
