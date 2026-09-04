@@ -19,7 +19,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.x
+          go-version: 1.25.x
       - uses: dominikh/staticcheck-action@ba605356b4b29a60e87ab9404b712f3461e566dc #v1.3.0
         with:
           version: "2022.1.1"
@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         go-version:
-          - 1.20.x
+          - 1.25.x
         platform:
           - ubuntu-latest
           - macos-latest
@@ -44,7 +44,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.x
+          go-version: 1.25.x
       - name: Run tests
         run: |
           go test ./... -coverprofile coverage.out
@@ -66,7 +66,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.x
+          go-version: 1.25.x
       - name: Login to Docker Hub
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc #v2
         with:
@@ -93,36 +93,36 @@ jobs:
         run: |
           export DH_TAG=$(git tag --points-at HEAD | sed 's/^v*//')
           docker manifest create \
-            containrrr/watchtower:$DH_TAG \
-            containrrr/watchtower:amd64-$DH_TAG \
-            containrrr/watchtower:i386-$DH_TAG \
-            containrrr/watchtower:armhf-$DH_TAG \
-            containrrr/watchtower:arm64v8-$DH_TAG
+            thunderlotus/watchtower-continue:$DH_TAG \
+            thunderlotus/watchtower-continue:amd64-$DH_TAG \
+            thunderlotus/watchtower-continue:i386-$DH_TAG \
+            thunderlotus/watchtower-continue:armhf-$DH_TAG \
+            thunderlotus/watchtower-continue:arm64v8-$DH_TAG
           docker manifest create \
-            ghcr.io/containrrr/watchtower:$DH_TAG \
-            ghcr.io/containrrr/watchtower:amd64-$DH_TAG \
-            ghcr.io/containrrr/watchtower:i386-$DH_TAG \
-            ghcr.io/containrrr/watchtower:armhf-$DH_TAG \
-            ghcr.io/containrrr/watchtower:arm64v8-$DH_TAG
+            ghcr.io/thunderlotus/watchtower-continue:$DH_TAG \
+            ghcr.io/thunderlotus/watchtower-continue:amd64-$DH_TAG \
+            ghcr.io/thunderlotus/watchtower-continue:i386-$DH_TAG \
+            ghcr.io/thunderlotus/watchtower-continue:armhf-$DH_TAG \
+            ghcr.io/thunderlotus/watchtower-continue:arm64v8-$DH_TAG
       - name: Annotate manifest for version
         run: |
           for REPO in '' ghcr.io/ ; do
           
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:$(echo $TAG | sed 's/^v*//') \
-            ${REPO}containrrr/watchtower:i386-$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:i386-$(echo $TAG | sed 's/^v*//') \
             --os linux \
             --arch 386
           
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:$(echo $TAG | sed 's/^v*//') \
-            ${REPO}containrrr/watchtower:armhf-$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:armhf-$(echo $TAG | sed 's/^v*//') \
             --os linux \
             --arch arm
       
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:$(echo $TAG | sed 's/^v*//') \
-            ${REPO}containrrr/watchtower:arm64v8-$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:$(echo $TAG | sed 's/^v*//') \
+            ${REPO}thunderlotus/watchtower-continue:arm64v8-$(echo $TAG | sed 's/^v*//') \
             --os linux \
             --arch arm64 \
             --variant v8
@@ -131,36 +131,36 @@ jobs:
       - name: Create manifest for latest
         run: |
           docker manifest create \
-            containrrr/watchtower:latest \
-            containrrr/watchtower:amd64-latest \
-            containrrr/watchtower:i386-latest \
-            containrrr/watchtower:armhf-latest \
-            containrrr/watchtower:arm64v8-latest
+            thunderlotus/watchtower-continue:latest \
+            thunderlotus/watchtower-continue:amd64-latest \
+            thunderlotus/watchtower-continue:i386-latest \
+            thunderlotus/watchtower-continue:armhf-latest \
+            thunderlotus/watchtower-continue:arm64v8-latest
           docker manifest create \
-            ghcr.io/containrrr/watchtower:latest \
-            ghcr.io/containrrr/watchtower:amd64-latest \
-            ghcr.io/containrrr/watchtower:i386-latest \
-            ghcr.io/containrrr/watchtower:armhf-latest \
-            ghcr.io/containrrr/watchtower:arm64v8-latest
+            ghcr.io/thunderlotus/watchtower-continue:latest \
+            ghcr.io/thunderlotus/watchtower-continue:amd64-latest \
+            ghcr.io/thunderlotus/watchtower-continue:i386-latest \
+            ghcr.io/thunderlotus/watchtower-continue:armhf-latest \
+            ghcr.io/thunderlotus/watchtower-continue:arm64v8-latest
       - name: Annotate manifest for latest
         run: |
           for REPO in '' ghcr.io/ ; do
 
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:latest \
-            ${REPO}containrrr/watchtower:i386-latest \
+            ${REPO}thunderlotus/watchtower-continue:latest \
+            ${REPO}thunderlotus/watchtower-continue:i386-latest \
             --os linux \
             --arch 386
       
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:latest \
-            ${REPO}containrrr/watchtower:armhf-latest \
+            ${REPO}thunderlotus/watchtower-continue:latest \
+            ${REPO}thunderlotus/watchtower-continue:armhf-latest \
             --os linux \
             --arch arm
             
           docker manifest annotate \
-            ${REPO}containrrr/watchtower:latest \
-            ${REPO}containrrr/watchtower:arm64v8-latest \
+            ${REPO}thunderlotus/watchtower-continue:latest \
+            ${REPO}thunderlotus/watchtower-continue:arm64v8-latest \
             --os linux \
             --arch arm64 \
             --variant v8
@@ -172,16 +172,16 @@ jobs:
           DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           docker login -u $DOCKER_USER -p $DOCKER_TOKEN && \
-            docker manifest push containrrr/watchtower:$(echo $TAG | sed 's/^v*//') && \
-            docker manifest push containrrr/watchtower:latest
+            docker manifest push thunderlotus/watchtower-continue:$(echo $TAG | sed 's/^v*//') && \
+            docker manifest push thunderlotus/watchtower-continue:latest
       - name: Push manifests to GitHub Container Registry
         env:
           DOCKER_USER: ${{ secrets.BOT_USERNAME }}
           DOCKER_TOKEN: ${{ secrets.BOT_GHCR_PAT }}
         run: |
           docker login -u $DOCKER_USER -p $DOCKER_TOKEN ghcr.io && \
-            docker manifest push ghcr.io/containrrr/watchtower:$(echo $TAG | sed 's/^v*//') && \
-            docker manifest push ghcr.io/containrrr/watchtower:latest
+            docker manifest push ghcr.io/thunderlotus/watchtower-continue:$(echo $TAG | sed 's/^v*//') && \
+            docker manifest push ghcr.io/thunderlotus/watchtower-continue:latest
 
   renew-docs:
     name: Refresh pkg.go.dev

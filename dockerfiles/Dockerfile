@@ -14,7 +14,6 @@ COPY --from=alpine \
     /usr/share/zoneinfo \
     /usr/share/zoneinfo
 
-EXPOSE 8080
 
 COPY watchtower /
 
