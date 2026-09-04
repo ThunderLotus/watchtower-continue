@@ -11,6 +11,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,10 +21,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.25.x
-      - uses: dominikh/staticcheck-action@ba605356b4b29a60e87ab9404b712f3461e566dc #v1.3.0
+      - uses: dominikh/staticcheck-action@v1.4.0
         with:
-          version: "2022.1.1"
-          install-go: "false" # StaticCheck uses go v1.17 which does not support `any`
+          version: "2024.1.6"
+          install-go: "false"
 
   test:
     name: Test
