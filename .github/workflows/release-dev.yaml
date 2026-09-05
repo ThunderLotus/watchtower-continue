@@ -21,6 +21,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.25.x
+      - name: go mod tidy
+        run: go mod tidy
       - name: Build
         run: ./build.sh
   test:
@@ -31,6 +33,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.25.x
+      - name: go mod tidy
+        run: go mod tidy
       - name: Test
         run: go test -v -coverprofile coverage.out -covermode atomic ./... 
       - name: Publish coverage
