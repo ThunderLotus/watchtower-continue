@@ -1,0 +1,1197 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://containrrr.dev/watchtower/project-issues-report/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Watchtower 项目问题分析报告 / Watchtower Project Issues Report - Watchtower</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="containrrr" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#watchtower_watchtower_project_issues_report" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Watchtower" class="md-header__button md-logo" aria-label="Watchtower" data-md-component="logo">
+      
+  <img src="../images/logo-450px.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Watchtower
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Watchtower 项目问题分析报告 / Watchtower Project Issues Report
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="containrrr" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="containrrr-dark" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/containrrr/watchtower/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Watchtower" class="md-nav__button md-logo" aria-label="Watchtower" data-md-component="logo">
+      
+  <img src="../images/logo-450px.png" alt="logo">
+
+    </a>
+    Watchtower
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/containrrr/watchtower/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arguments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arguments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../private-registries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Private registries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../linked-containers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linked containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote-hosts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote hosts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../secure-connections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Secure connections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stop-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stop signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle-hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../running-multiple-instances/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running multiple instances
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#critical_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔴 严重问题 / Critical Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔴 严重问题 / Critical Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1_bug_-_nil_nil_pointer_dereference_risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #1 代码Bug - nil指针解引用风险 / Nil Pointer Dereference Risk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2_bug_-_wrong_variable_reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #2 代码Bug - 错误的变量引用 / Wrong Variable Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_-_test_failure_-_environment_variable_dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #3 测试失败 - 环境变量依赖 / Test Failure - Environment Variable Dependency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3b_failed_failed_count_inaccuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #3b Failed 统计不准确 / Failed Count Inaccuracy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high_priority_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟠 高优先级问题 / High Priority Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟠 高优先级问题 / High Priority Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4_git_binary_file_tracked_by_git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #4 二进制文件被git跟踪 / Binary File Tracked by Git
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5_line_ending_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #5 行尾符问题 / Line Ending Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6_documentation-code_mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #6 文档与代码严重不一致 / Documentation-Code Mismatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medium_priority_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟡 中优先级问题 / Medium Priority Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟡 中优先级问题 / Medium Priority Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7_git_tempwork_files_tracked_by_git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #7 临时/工作文件被git跟踪 / Temp/Work Files Tracked by Git
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8_coveragegit_coverage_directory_tracked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #8 coverage目录被git跟踪 / Coverage Directory Tracked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9_codegraph_codegraph_directory_unhandled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #9 .codegraph/目录未处理 / .codegraph/ Directory Unhandled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10_agentsmd_agentsmd_contradiction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #10 AGENTS.md矛盾 / AGENTS.md Contradiction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11_-_fixme_technical_debt_-_fixme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #11 技术债务 - FIXME / Technical Debt - FIXME
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12_version_number_stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #12 版本号未更新 / Version Number Stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#low_priority_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 低优先级问题 / Low Priority Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 低优先级问题 / Low Priority Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#13_dockerfilelocal_dockerfilelocal_references_missing_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #13 Dockerfile.local引用缺失文件 / Dockerfile.local References Missing File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14_gofmt_gofmt_format_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        #14 gofmt格式问题 / gofmt Format Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution_summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 解决清单 / Resolution Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="watchtower_watchtower_project_issues_report">Watchtower 项目问题分析报告 / Watchtower Project Issues Report<a class="headerlink" href="#watchtower_watchtower_project_issues_report" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>生成时间 / Generated: 2026-09-03<br />
+分析工具 / Analysis Tools: CodeGraph, go vet, go test, gofmt, git</p>
+</blockquote>
+<hr />
+<h2 id="critical_issues">🔴 严重问题 / Critical Issues<a class="headerlink" href="#critical_issues" title="Permanent link">&para;</a></h2>
+<h3 id="1_bug_-_nil_nil_pointer_dereference_risk">#1 代码Bug - nil指针解引用风险 / Nil Pointer Dereference Risk<a class="headerlink" href="#1_bug_-_nil_nil_pointer_dereference_risk" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>pkg/container/client.go:601-612</code> (<code>waitForExecOrTimeout</code>)</p>
+<p><strong>中文</strong>: 在 <code>waitForExecOrTimeout</code> 函数中，<code>execInspect</code> 的字段在 <code>err != nil</code> 检查之前就被访问。如果 API 返回错误，<code>execInspect</code> 可能为 nil，导致 panic。<code>//goland:noinspection GoNilness</code> 注释只是抑制了 IDE 警告，没有修复问题。</p>
+<p><strong>English</strong>: In <code>waitForExecOrTimeout</code>, fields of <code>execInspect</code> are accessed before checking <code>err != nil</code>. If the API returns an error, <code>execInspect</code> may be nil, causing a panic. The <code>//goland:noinspection GoNilness</code> comment only suppresses the IDE warning without fixing the issue.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="2_bug_-_wrong_variable_reference">#2 代码Bug - 错误的变量引用 / Wrong Variable Reference<a class="headerlink" href="#2_bug_-_wrong_variable_reference" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>tplprev/main_wasm.go:49</code></p>
+<p><strong>中文</strong>: WASM 版本的模板预览工具在处理日志级别时，错误地使用了 <code>statesArg</code>（状态参数）而不是 <code>levelsArg</code>（级别参数）。导致日志级别永远不会被正确解析。</p>
+<p><strong>English</strong>: The WASM template preview tool incorrectly uses <code>statesArg</code> (state parameter) instead of <code>levelsArg</code> (level parameter) when processing log levels. This causes log levels to never be parsed correctly.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="3_-_test_failure_-_environment_variable_dependency">#3 测试失败 - 环境变量依赖 / Test Failure - Environment Variable Dependency<a class="headerlink" href="#3_-_test_failure_-_environment_variable_dependency" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>internal/flags/flags_test.go:165</code> (<code>TestLogFormatFlag</code>)</p>
+<p><strong>中文</strong>: 测试假设 <code>no-color</code> 标志默认为 <code>false</code>，但实际默认值是 <code>viper.IsSet("NO_COLOR")</code>。当环境变量 <code>NO_COLOR</code> 被设置时，<code>ForceColors</code> 为 <code>false</code>，导致断言失败。测试未隔离环境变量依赖。</p>
+<p><strong>English</strong>: The test assumes <code>no-color</code> flag defaults to <code>false</code>, but the actual default is <code>viper.IsSet("NO_COLOR")</code>. When <code>NO_COLOR</code> env var is set, <code>ForceColors</code> becomes <code>false</code>, causing the assertion to fail. The test does not isolate the environment variable dependency.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="3b_failed_failed_count_inaccuracy">#3b Failed 统计不准确 / Failed Count Inaccuracy<a class="headerlink" href="#3b_failed_failed_count_inaccuracy" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>internal/actions/update.go:70</code> + <code>pkg/session/progress.go:23</code></p>
+<p><strong>中文</strong>: 当镜像拉取失败时（如 <code>anisette-v3-server</code> 不存在），容器被 <code>AddSkipped</code> 添加到 progress 中（状态为 <code>SkippedState</code>），而非标记为 <code>FailedState</code>。导致 <code>Session done Failed=0</code> 即使有明确错误，误导监控。</p>
+<p><strong>English</strong>: When image pull fails (e.g., <code>anisette-v3-server</code> doesn't exist), the container is added via <code>AddSkipped</code> (state = <code>SkippedState</code>) instead of being marked as <code>FailedState</code>. This causes <code>Session done Failed=0</code> even with explicit errors, misleading monitoring.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h2 id="high_priority_issues">🟠 高优先级问题 / High Priority Issues<a class="headerlink" href="#high_priority_issues" title="Permanent link">&para;</a></h2>
+<h3 id="4_git_binary_file_tracked_by_git">#4 二进制文件被git跟踪 / Binary File Tracked by Git<a class="headerlink" href="#4_git_binary_file_tracked_by_git" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>watchtower-test.exe</code> 已被 git 跟踪。虽然 <code>.gitignore</code> 中有该文件名，但一旦被跟踪，gitignore 不再生效。</p>
+<p><strong>English</strong>: <code>watchtower-test.exe</code> is tracked by git. Although <code>.gitignore</code> contains the filename, once tracked, gitignore no longer takes effect.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="5_line_ending_issues">#5 行尾符问题 / Line Ending Issues<a class="headerlink" href="#5_line_ending_issues" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: 169/177 个文件在工作目录中是 CRLF 格式，仓库存储的是 LF。没有 <code>.gitattributes</code> 文件强制行尾规范，导致 <code>gofmt</code> 在 Windows 上报告几乎所有文件都有格式问题。</p>
+<p><strong>English</strong>: 169/177 files are CRLF in the working directory, while the repo stores LF. No <code>.gitattributes</code> file enforces line endings, causing <code>gofmt</code> to report format issues for nearly all files on Windows.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="6_documentation-code_mismatch">#6 文档与代码严重不一致 / Documentation-Code Mismatch<a class="headerlink" href="#6_documentation-code_mismatch" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>文档描述 / Doc Claim</th>
+<th>实际情况 / Reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Go 1.20</td>
+<td>Go 1.25.8</td>
+</tr>
+<tr>
+<td>HTTP API (port 8080)</td>
+<td><code>pkg/api</code> package <strong>removed</strong> / 已移除</td>
+</tr>
+<tr>
+<td>Prometheus monitoring</td>
+<td><strong>removed</strong> (metrics.go: "Simplified version without Prometheus") / 已移除</td>
+</tr>
+<tr>
+<td>Grafana dashboard</td>
+<td>Only a PNG remains / 仅剩图片</td>
+</tr>
+<tr>
+<td>docker-compose: Prometheus+Grafana</td>
+<td><strong>Not present</strong> / 不再包含</td>
+</tr>
+</tbody>
+</table>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h2 id="medium_priority_issues">🟡 中优先级问题 / Medium Priority Issues<a class="headerlink" href="#medium_priority_issues" title="Permanent link">&para;</a></h2>
+<h3 id="7_git_tempwork_files_tracked_by_git">#7 临时/工作文件被git跟踪 / Temp/Work Files Tracked by Git<a class="headerlink" href="#7_git_tempwork_files_tracked_by_git" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>notes.txt</code>, <code>Code_Review.md</code>, <code>BRANCHES_ANALYSIS.md</code>, <code>Dockerfile_Work.md</code>, <code>Dockerfile.local</code>, <code>.devbots/lock-issue.yml</code> 不应在正式仓库中。</p>
+<p><strong>English</strong>: <code>notes.txt</code>, <code>Code_Review.md</code>, <code>BRANCHES_ANALYSIS.md</code>, <code>Dockerfile_Work.md</code>, <code>Dockerfile.local</code>, <code>.devbots/lock-issue.yml</code> should not be in the official repo.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="8_coveragegit_coverage_directory_tracked">#8 coverage目录被git跟踪 / Coverage Directory Tracked<a class="headerlink" href="#8_coveragegit_coverage_directory_tracked" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>coverage</code> 目录是测试覆盖率构建产物，不应被跟踪。</p>
+<p><strong>English</strong>: <code>coverage</code> directory is a test coverage build artifact and should not be tracked.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="9_codegraph_codegraph_directory_unhandled">#9 .codegraph/目录未处理 / .codegraph/ Directory Unhandled<a class="headerlink" href="#9_codegraph_codegraph_directory_unhandled" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>.codegraph/</code> 既未被 git 跟踪，也未在 <code>.gitignore</code> 中。</p>
+<p><strong>English</strong>: <code>.codegraph/</code> is neither tracked by git nor in <code>.gitignore</code>.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h3 id="10_agentsmd_agentsmd_contradiction">#10 AGENTS.md矛盾 / AGENTS.md Contradiction<a class="headerlink" href="#10_agentsmd_agentsmd_contradiction" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>AGENTS.md</code> 被加入 <code>.gitignore</code>，但文件实际存在于工作目录且被使用。</p>
+<p><strong>English</strong>: <code>AGENTS.md</code> is in <code>.gitignore</code> but exists in the working directory and is actively used.</p>
+<p><strong>状态 / Status</strong>: ⏸️ 保持现状 / Kept as-is (intentional local-only config)</p>
+<hr />
+<h3 id="11_-_fixme_technical_debt_-_fixme">#11 技术债务 - FIXME / Technical Debt - FIXME<a class="headerlink" href="#11_-_fixme_technical_debt_-_fixme" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>internal/flags/flags.go:530</code></p>
+<p><strong>中文</strong>: 存在 FIXME 注释关于 snakeswap hack，表明有已知的技术债务。</p>
+<p><strong>English</strong>: FIXME comment about snakeswap hack indicates known technical debt.</p>
+<p><strong>状态 / Status</strong>: ⏸️ 需要更大重构 / Requires larger refactor</p>
+<hr />
+<h3 id="12_version_number_stale">#12 版本号未更新 / Version Number Stale<a class="headerlink" href="#12_version_number_stale" title="Permanent link">&para;</a></h3>
+<p><strong>位置 / Location</strong>: <code>internal/meta/meta.go:5</code> (<code>Version = "v1.8.0"</code>)</p>
+<p><strong>中文</strong>: 项目已新增 retry 包等功能，版本号停滞在 v1.8.0。</p>
+<p><strong>English</strong>: Project has added retry package and other features, but version remains at v1.8.0.</p>
+<p><strong>状态 / Status</strong>: ⏸️ 需要发布决策 / Requires release decision</p>
+<hr />
+<h2 id="low_priority_issues">🟢 低优先级问题 / Low Priority Issues<a class="headerlink" href="#low_priority_issues" title="Permanent link">&para;</a></h2>
+<h3 id="13_dockerfilelocal_dockerfilelocal_references_missing_file">#13 Dockerfile.local引用缺失文件 / Dockerfile.local References Missing File<a class="headerlink" href="#13_dockerfilelocal_dockerfilelocal_references_missing_file" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: <code>Dockerfile.local:20</code> 引用 <code>watchtower-compat</code> 二进制，该文件不存在。</p>
+<p><strong>English</strong>: <code>Dockerfile.local:20</code> references <code>watchtower-compat</code> binary which does not exist.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed (file removed)</p>
+<hr />
+<h3 id="14_gofmt_gofmt_format_issues">#14 gofmt格式问题 / gofmt Format Issues<a class="headerlink" href="#14_gofmt_gofmt_format_issues" title="Permanent link">&para;</a></h3>
+<p><strong>中文</strong>: 由于 CRLF 行尾符，<code>gofmt -l</code> 列出几乎所有 Go 文件。通过添加 <code>.gitattributes</code> 解决。</p>
+<p><strong>English</strong>: Due to CRLF line endings, <code>gofmt -l</code> lists nearly all Go files. Resolved by adding <code>.gitattributes</code>.</p>
+<p><strong>状态 / Status</strong>: ✅ 已修复 / Fixed</p>
+<hr />
+<h2 id="resolution_summary">📊 解决清单 / Resolution Summary<a class="headerlink" href="#resolution_summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题 / Issue</th>
+<th>严重程度 / Severity</th>
+<th>状态 / Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>nil指针解引用 / Nil pointer dereference</td>
+<td>🔴 Critical</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>错误变量引用 / Wrong variable reference</td>
+<td>🔴 Critical</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>3</td>
+<td>测试环境依赖 / Test env dependency</td>
+<td>🔴 Critical</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>3b</td>
+<td>Failed统计不准确 / Failed count inaccuracy</td>
+<td>🔴 Critical</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>4</td>
+<td>二进制文件跟踪 / Binary file tracked</td>
+<td>🟠 High</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>5</td>
+<td>行尾符问题 / Line ending issues</td>
+<td>🟠 High</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>6</td>
+<td>文档不一致 / Doc mismatch</td>
+<td>🟠 High</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>7</td>
+<td>临时文件跟踪 / Temp files tracked</td>
+<td>🟡 Medium</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>8</td>
+<td>coverage目录跟踪 / Coverage tracked</td>
+<td>🟡 Medium</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>9</td>
+<td>.codegraph未处理 / .codegraph unhandled</td>
+<td>🟡 Medium</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>10</td>
+<td>AGENTS.md矛盾 / AGENTS.md conflict</td>
+<td>🟡 Medium</td>
+<td>⏸️ Kept as-is</td>
+</tr>
+<tr>
+<td>11</td>
+<td>FIXME技术债务 / FIXME tech debt</td>
+<td>🟡 Medium</td>
+<td>⏸️ Deferred</td>
+</tr>
+<tr>
+<td>12</td>
+<td>版本号过时 / Version stale</td>
+<td>🟡 Medium</td>
+<td>⏸️ Deferred</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Dockerfile.local缺失引用 / Missing reference</td>
+<td>🟢 Low</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>14</td>
+<td>gofmt格式问题 / gofmt format</td>
+<td>🟢 Low</td>
+<td>✅ Fixed</td>
+</tr>
+</tbody>
+</table>
+<p><strong>统计 / Statistics</strong>: 11/14 已修复 / Fixed, 3/14 延期 / Deferred</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
