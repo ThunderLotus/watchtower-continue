@@ -4,6 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/containrrr/watchtower/internal/actions/mocks"
 	"github.com/containrrr/watchtower/internal/meta"
 	"github.com/containrrr/watchtower/pkg/registry/digest"
@@ -11,10 +16,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestDigest(t *testing.T) {
@@ -164,10 +165,10 @@ var _ = Describe("Digests", func() {
 			// Encode as JSON then base64
 			jsonBytes, _ := json.Marshal(creds)
 			base64Encoded := base64.StdEncoding.EncodeToString(jsonBytes)
-			
+
 			// Transform
 			transformed := digest.TransformAuth(base64Encoded)
-			
+
 			// Should be base64 of "testuser:testpass"
 			expected := base64.StdEncoding.EncodeToString([]byte("testuser:testpass"))
 			Expect(transformed).To(Equal(expected))
