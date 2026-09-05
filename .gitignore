@@ -1,6 +1,8 @@
 watchtower
 watchtower.exe
 watchtower-test.exe
+watchtower-linux-*
+watchtower-windows-*.exe
 *.tar
 vendor
 .glide
