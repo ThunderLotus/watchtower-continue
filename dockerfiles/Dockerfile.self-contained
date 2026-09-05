@@ -16,7 +16,7 @@ RUN apk add --no-cache \
 RUN git clone --branch "${WATCHTOWER_VERSION}" https://github.com/ThunderLotus/watchtower-continue.git
 
 RUN \
-  cd watchtower && \
+  cd watchtower-continue && \
   \
   GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build -a -ldflags "-extldflags '-static' -X github.com/containrrr/watchtower/internal/meta.Version=$(git describe --tags)" . && \
   GO111MODULE=on go test ./... -v
@@ -33,7 +33,7 @@ LABEL "com.centurylinklabs.watchtower"="true"
 # copy files from other container
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-COPY --from=builder /go/watchtower/watchtower /watchtower
+COPY --from=builder /go/watchtower-continue/watchtower /watchtower
 
 HEALTHCHECK CMD [ "/watchtower", "--health-check"]
 
